@@ -93,4 +93,7 @@ df <- bind_rows(liste_dfs_clean)
 View(head(validation_2_trim_2022))
 
 # Export du fichier avant nettoyage
+if (!dir.exists("data/final_data")) {
+  dir.create("data/final_data")
+}
 write_csv(df, "data/final_data/validations_raw_2018_2024.csv")
