@@ -2,10 +2,9 @@ library(shiny)
 library(tidyverse)
 library(leaflet)
 library(scales)
-library(lubridate)
 
 # --- 1. CHARGEMENT ET PRÉPARATION ---
-df <- readRDS("../data/final_data/data_clean.rds")
+df <- readRDS("data_clean.rds")
 
 # Préparation Données Carte
 df_map <- df %>%

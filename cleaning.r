@@ -312,4 +312,6 @@ if (!dir.exists("data/final_data")) {
   dir.create("data/final_data")
 }
 write_csv(df, "data/final_data/validations_geo_2018_2024.csv")
-saveRDS(df_final, "data/final_data/data_clean.rds")
+saveRDS(df_final, "data/final_data/data_clean.rds", compress = "xz")
+
+
