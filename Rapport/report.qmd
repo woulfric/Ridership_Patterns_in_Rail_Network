@@ -1,0 +1,83 @@
+---
+title: "Analyzing and Visualizing Ridership Patterns in Île-de-France"
+author: "Group: Amira HAMDI, Melissa MEDJBER, Kamel YENNEK, Elias ACHOUR"
+date: "January 2026"
+format: html
+execute:
+  echo: true
+  warning: false
+  message: false
+---
+
+
+```{r}
+#| label: setup
+#| include: false
+library(tidyverse)
+library(lubridate)
+library(sf)
+```
+
+# 1. Introduction
+Public transport planning in Île-de-France relies heavily on detailed knowledge of passenger flows over time and space.
+This report analyses smart-card validations on the rail network between 2018 and 2024 to characterise long-term trends, seasonal patterns, and deviations from a “normal” week during holiday periods.
+
+The objectives are threefold:
+
+- To build a reproducible cleaning pipeline that consolidates heterogeneous raw files into a consistent analytical dataset at the stop-area level.
+
+- To perform exploratory data analysis (EDA) on daily, monthly and yearly ridership indicators for the whole network.
+
+- To define and compare reference and holiday weeks, as a basis for a Shiny dashboard that allows interactive exploration of ridership patterns.
+
+# 2. Data and tools
+## 2.1 Data sources
+The analysis is based on open data provided by Île-de-France Mobilités, including:
+
+- Semester-level rail validation files from 2018 to 2024, with one record per day, stop and ticket category.
+
+- A spatial reference file of “Zones d’arrêt” (stop areas), used to attach geographical coordinates and station names to each stop identifier.
+
+In this report, the study period is restricted to 1 January 2018 – 31 December 2024, and validations are aggregated at the stop-area level defined by the identifier ID_REFA_LDA.
+
+## 2.2 Software and R packages
+All computations and figures are produced in R (version X.Y.Z) using the following packages:
+
+tidyverse for data manipulation (dplyr, tidyr, readr) and plotting (ggplot2).
+
+lubridate for date parsing and handling of temporal variables.
+
+sf for reading and transforming the spatial stop-area reference data.
+
+The full analysis is implemented in a reproducible way inside this Quarto document, which can be rendered to PDF or HTML.
+
+# 3. Response to the questions
+
+## Data preprocessing and cleaning
+
+### 1 Reading and concatenating raw yearly files
+
+The raw validation data are provided as semester-based text files for each year between 2018 and 2024. [web:20][web:24][web:47]  
+In our script, we first import the two semester files for every year using `read.delim()`, adapting the separator or encoding when necessary (for example a semicolon separator for the second semester of 2022 and UTF-16LE encoding for one 2023 file).
+
+Concretely, this produces fourteen R objects in memory (`validation_1_trim_2018`, `validation_2_trim_2018`, …, `validation_2_trim_2024`), each corresponding to one semester of rail validations.  
+All these objects are then stored in a single list `liste_dfs`, which allows us to apply the same cleaning function to every file in a compact and reproducible way.
+
+### 2 Harmonising column names and types
+
+Because the historical files do not all use the same schema, a dedicated function `clean_valid_type()` is applied to each element of `liste_dfs`. [web:56]  
+This function first standardises the stop-area identifier by renaming any column called `lda` or `ID_ZDC` into a common field `ID_REFA_LDA`, which will later be used to join ridership data with the spatial reference of stop areas.
+
+In a second step, the function enforces consistent data types across all years: network and stop codes are converted to character (`CODE_STIF_RES`, `CODE_STIF_ARRET`), the validation count `NB_VALD` is cast to integer, and the date column `JOUR` is parsed as a proper `Date` object using flexible formats (`ymd` or `dmy` depending on the original encoding).  
+After applying `clean_valid_type()` to each element of the list, the cleaned tables are concatenated row-wise with `bind_rows()` to form a single historical dataset `df` covering all days, stops and ticket categories for the period 2018–2024.
+
+### 3 Handling missing values and inconsistent records
+
+The consolidated dataset `df` is then checked for data quality issues by counting missing values in each column and isolating problematic rows. [web:56]  
+In particular, we identify records with missing or empty stop codes (`CODE_STIF_ARRET`) or network codes (`CODE_STIF_RES`), as well as rows where the stop name corresponds to an unknown location.
+
+To avoid keeping observations that cannot be reliably mapped to a physical station, all lines where `LIBELLE_ARRET` is equal to “Inconnu” are removed from the dataset, and the difference in row count before and after this filter is reported.  
+In addition, we examine the distribution of the main ridership variable `NB_VALD`, confirm the absence of negative values, and drop all rows where `NB_VALD` is missing, which correspond to incomplete or non-numeric records in the raw files.
+
+Finally, the temporal extent of the study is enforced by keeping only dates between 1 January 2018 and 31 December 2024.  
+This restriction ensures that all subsequent analyses are perfectly aligned with the project specification and that no earlier or later data points from the IdFM history files are inadvertently included. [web:47][web:50]
