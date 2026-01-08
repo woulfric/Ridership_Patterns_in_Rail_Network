@@ -57,6 +57,7 @@ The full analysis is implemented in a reproducible way inside this Quarto docume
 
 ### 1 Reading and concatenating raw yearly files
 
+
 The raw validation data are provided as semester-based text files for each year between 2018 and 2024. [web:20][web:24][web:47]  
 In our script, we first import the two semester files for every year using `read.delim()`, adapting the separator or encoding when necessary (for example a semicolon separator for the second semester of 2022 and UTF-16LE encoding for one 2023 file).
 
