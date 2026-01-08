@@ -340,7 +340,7 @@ In contrast, the holiday-week profile is clearly below the other curves for ever
 ## 3.4 Shiny dashboard
 
 All results of the previous sections are made available in an interactive Shiny dashboard, deployed online at:  
-`https://zkoufw-kamell@yennek.shinyapps.io/shiny_web_app/`  *(URL à adapter si nécessaire)*.  
+<https://zkoufw-kamell@yennek.shinyapps.io/shiny_web_app/>.  
 
 The application is built in a single script `app.R` that loads the cleaned dataset `data_clean.rds` and provides two main tabs: a geographical exploration of stations and a weekly comparison tool.
 

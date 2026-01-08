@@ -389,7 +389,7 @@ In contrast, the holiday-week profile is clearly below the other curves for ever
 <section id="shiny-dashboard" class="level2">
 <h2 class="anchored" data-anchor-id="shiny-dashboard">3.4 Shiny dashboard</h2>
 <p>All results of the previous sections are made available in an interactive Shiny dashboard, deployed online at:<br>
-<code>https://zkoufw-kamell@yennek.shinyapps.io/shiny_web_app/</code> <em>(URL à adapter si nécessaire)</em>.</p>
+<a href="https://zkoufw-kamell@yennek.shinyapps.io/shiny_web_app/" class="uri">https://zkoufw-kamell@yennek.shinyapps.io/shiny_web_app/</a>.</p>
 <p>The application is built in a single script <code>app.R</code> that loads the cleaned dataset <code>data_clean.rds</code> and provides two main tabs: a geographical exploration of stations and a weekly comparison tool.</p>
 <section id="global-structure-of-the-app" class="level3">
 <h3 class="anchored" data-anchor-id="global-structure-of-the-app">3.4.1 Global structure of the app</h3>
@@ -487,6 +487,13 @@ A percentage change <code>Baisse_Pct</code> is also computed as ((( - ) / ) ), w
 <p>Across the top 5 stations, p‑values are generally below 0.05 and the percentage changes are strongly negative, indicating that the drop in ridership observed in August compared with January is unlikely to be due to random variability alone.<br>
 These t‑tests therefore confirm, in a formal statistical way, the conclusions from the exploratory analysis and the Shiny comparisons: holiday periods produce a significant and substantial reduction in daily rail usage at the busiest stations of the network.</p>
 </section>
+</section>
+<section id="conclusion" class="level2">
+<h2 class="anchored" data-anchor-id="conclusion">Conclusion</h2>
+<p>This project delivers a <strong>reliable</strong> and reusable pipeline to analyse smart-card validations on the Île-de-France rail network between 2018 and 2024, from heterogeneous raw files to an aggregated daily dataset at stop-area level. The cleaning scripts handle schema differences, encoding issues and inconsistent records, and produce a single harmonised file that underpins all subsequent analyses.</p>
+<p>The exploratory analysis highlights clear long-term trends and seasonal patterns in ridership, with strong weekday–weekend contrasts and marked drops during holiday periods and exceptional events such as the Covid crisis. Temporal aggregation at daily, monthly and yearly scales shows that, once 2020 is excluded, the network gradually recovers and stabilises, while still exhibiting recurrent dips in August and around the end-of-year holidays.</p>
+<p>A reference “normal” week is defined using pre-Covid data, and compared to holiday and atypical weeks to quantify deviations in both total traffic and station-level profiles. The interactive Shiny dashboard allows users to filter by line, station and period, to visualise these differences dynamically and to explore how individual stations deviate from the global network behaviour.</p>
+<p>Finally, simple statistical methods complement the visual findings: descriptive indicators and station-level t‑tests applied to the top 5 stations confirm that the decreases observed during August holidays are both large in magnitude and statistically significant compared to January. Taken together, the cleaning pipeline, EDA, interactive dashboard and statistical tests provide a coherent framework to understand normal ridership patterns, identify holiday effects, and support data-driven planning decisions for public transport in Île-de-France.</p>
 </section>
 </section>
 
