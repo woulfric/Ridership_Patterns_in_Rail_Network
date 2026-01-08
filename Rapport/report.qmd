@@ -400,3 +400,50 @@ When the button “Comparer les périodes” is clicked, the server builds `comp
 
 The results are displayed as a bar chart (`geom_col(position = "dodge")`) comparing the two periods for each weekday, and in a summary table where the relative change is given as a percentage.  
 This tool lets users quantify, for example, how a holiday week differs from a normal pre‑COVID week, both visually and numerically for each day of the week. 
+
+
+
+## 3.5 Statistical methods
+
+To formally assess whether the differences observed between normal and holiday periods are statistically significant, an additional script `06_statistics.R` applies simple descriptive statistics and t‑tests on a subset of stations.  
+All computations are based on the cleaned dataset `df` saved as `validations_clean_2018_2024.rds`. 
+
+### 3.5.1 Definition of normal and holiday periods
+
+The script first reloads the daily dataset with `df <- readRDS("data/final_data/data_clean.rds")` and derives three temporal variables: the month `Mois = month(JOUR)`, the year `Annee = year(JOUR)` and the day of week `Jour_Semaine = wday(JOUR, week_start = 1)`.  
+To distinguish normal work periods from holidays, January (excluding 1 January) is used as a “normal” month and August as a “holiday” month, while the atypical year 2020 is removed by filtering on `Annee != 2020`. 
+
+A categorical variable `Periode` is then created with `ifelse(Mois == 1, "Normal (Janvier)", "Vacances (Août)")`, so that every daily observation is tagged as either normal or holiday.  
+To keep the analysis interpretable and computationally light, the script focuses on the top 5 busiest stations, identified by aggregating `NB_VALD` by `NOM_GARE` and selecting the five highest totals in `top_5_gares`. 
+
+### 3.5.2 Descriptive statistics by station and period
+
+For these five stations, a focused dataset `df_focus` is built and descriptive statistics are computed with `group_by(NOM_GARE, Periode)` followed by `summarise()`.  
+For each station and each period, the script calculates the daily mean `Moyenne_Journaliere = mean(NB_VALD)` and the standard deviation `Ecart_Type = sd(NB_VALD)`, then reshapes the results with `pivot_wider()` so that normal and holiday values appear side by side in `stats_descriptives`. 
+
+This table shows, for example, that the average number of validations per day in January is much higher than in August for each of the top 5 stations, while standard deviations remain of comparable magnitude.  
+These descriptive statistics already indicate a substantial and systematic decrease in ridership during the holiday month compared with normal working conditions.
+
+### 3.5.3 Station-level t‑tests
+
+To validate these differences statistically, the script applies a two-sample t‑test for each station using `t.test(NB_VALD ~ Periode, data = cur_data())` inside a `group_by(NOM_GARE)` block.  
+The raw test objects are stored in a list column `t_test`, then tidied with `broom::tidy()` and unnested to obtain a clean summary table `resultats_tests` containing, for each station, the p‑value and the two mean estimates `estimate1` and `estimate2`. 
+
+The estimates are interpreted as the mean daily ridership during holidays (`estimate1`, August) and during normal periods (`estimate2`, January), and a new column `Significatif` flags results with `p.value < 0.05` as statistically significant.  
+A percentage change `Baisse_Pct` is also computed as \(((\text{estimate2} - \text{estimate1}) / \text{estimate1}) \times 100\), which quantifies the relative difference between normal and holiday ridership for each station. 
+
+Across the top 5 stations, p‑values are generally below 0.05 and the percentage changes are strongly negative, indicating that the drop in ridership observed in August compared with January is unlikely to be due to random variability alone.  
+These t‑tests therefore confirm, in a formal statistical way, the conclusions from the exploratory analysis and the Shiny comparisons: holiday periods produce a significant and substantial reduction in daily rail usage at the busiest stations of the network.
+
+
+
+
+## Conclusion
+
+This project delivers a **reliable** and reusable pipeline to analyse smart-card validations on the Île-de-France rail network between 2018 and 2024, from heterogeneous raw files to an aggregated daily dataset at stop-area level.  The cleaning scripts handle schema differences, encoding issues and inconsistent records, and produce a single harmonised file that underpins all subsequent analyses.
+
+The exploratory analysis highlights clear long-term trends and seasonal patterns in ridership, with strong weekday–weekend contrasts and marked drops during holiday periods and exceptional events such as the Covid crisis.  Temporal aggregation at daily, monthly and yearly scales shows that, once 2020 is excluded, the network gradually recovers and stabilises, while still exhibiting recurrent dips in August and around the end-of-year holidays.
+
+A reference “normal” week is defined using pre-Covid data, and compared to holiday and atypical weeks to quantify deviations in both total traffic and station-level profiles.  The interactive Shiny dashboard allows users to filter by line, station and period, to visualise these differences dynamically and to explore how individual stations deviate from the global network behaviour.
+
+Finally, simple statistical methods complement the visual findings: descriptive indicators and station-level t‑tests applied to the top 5 stations confirm that the decreases observed during August holidays are both large in magnitude and statistically significant compared to January.  Taken together, the cleaning pipeline, EDA, interactive dashboard and statistical tests provide a coherent framework to understand normal ridership patterns, identify holiday effects, and support data-driven planning decisions for public transport in Île-de-France.

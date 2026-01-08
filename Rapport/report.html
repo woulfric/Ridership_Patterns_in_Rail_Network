@@ -460,6 +460,34 @@ Two <code>dateRangeInput</code> widgets (<code>date_ref</code> and <code>date_co
 This tool lets users quantify, for example, how a holiday week differs from a normal pre‑COVID week, both visually and numerically for each day of the week.</p>
 </section>
 </section>
+<section id="statistical-methods" class="level2">
+<h2 class="anchored" data-anchor-id="statistical-methods">3.5 Statistical methods</h2>
+<p>To formally assess whether the differences observed between normal and holiday periods are statistically significant, an additional script <code>06_statistics.R</code> applies simple descriptive statistics and t‑tests on a subset of stations.<br>
+All computations are based on the cleaned dataset <code>df</code> saved as <code>validations_clean_2018_2024.rds</code>.</p>
+<section id="definition-of-normal-and-holiday-periods" class="level3">
+<h3 class="anchored" data-anchor-id="definition-of-normal-and-holiday-periods">3.5.1 Definition of normal and holiday periods</h3>
+<p>The script first reloads the daily dataset with <code>df &lt;- readRDS("data/final_data/data_clean.rds")</code> and derives three temporal variables: the month <code>Mois = month(JOUR)</code>, the year <code>Annee = year(JOUR)</code> and the day of week <code>Jour_Semaine = wday(JOUR, week_start = 1)</code>.<br>
+To distinguish normal work periods from holidays, January (excluding 1 January) is used as a “normal” month and August as a “holiday” month, while the atypical year 2020 is removed by filtering on <code>Annee != 2020</code>.</p>
+<p>A categorical variable <code>Periode</code> is then created with <code>ifelse(Mois == 1, "Normal (Janvier)", "Vacances (Août)")</code>, so that every daily observation is tagged as either normal or holiday.<br>
+To keep the analysis interpretable and computationally light, the script focuses on the top 5 busiest stations, identified by aggregating <code>NB_VALD</code> by <code>NOM_GARE</code> and selecting the five highest totals in <code>top_5_gares</code>.</p>
+</section>
+<section id="descriptive-statistics-by-station-and-period" class="level3">
+<h3 class="anchored" data-anchor-id="descriptive-statistics-by-station-and-period">3.5.2 Descriptive statistics by station and period</h3>
+<p>For these five stations, a focused dataset <code>df_focus</code> is built and descriptive statistics are computed with <code>group_by(NOM_GARE, Periode)</code> followed by <code>summarise()</code>.<br>
+For each station and each period, the script calculates the daily mean <code>Moyenne_Journaliere = mean(NB_VALD)</code> and the standard deviation <code>Ecart_Type = sd(NB_VALD)</code>, then reshapes the results with <code>pivot_wider()</code> so that normal and holiday values appear side by side in <code>stats_descriptives</code>.</p>
+<p>This table shows, for example, that the average number of validations per day in January is much higher than in August for each of the top 5 stations, while standard deviations remain of comparable magnitude.<br>
+These descriptive statistics already indicate a substantial and systematic decrease in ridership during the holiday month compared with normal working conditions.</p>
+</section>
+<section id="station-level-ttests" class="level3">
+<h3 class="anchored" data-anchor-id="station-level-ttests">3.5.3 Station-level t‑tests</h3>
+<p>To validate these differences statistically, the script applies a two-sample t‑test for each station using <code>t.test(NB_VALD ~ Periode, data = cur_data())</code> inside a <code>group_by(NOM_GARE)</code> block.<br>
+The raw test objects are stored in a list column <code>t_test</code>, then tidied with <code>broom::tidy()</code> and unnested to obtain a clean summary table <code>resultats_tests</code> containing, for each station, the p‑value and the two mean estimates <code>estimate1</code> and <code>estimate2</code>.</p>
+<p>The estimates are interpreted as the mean daily ridership during holidays (<code>estimate1</code>, August) and during normal periods (<code>estimate2</code>, January), and a new column <code>Significatif</code> flags results with <code>p.value &lt; 0.05</code> as statistically significant.<br>
+A percentage change <code>Baisse_Pct</code> is also computed as ((( - ) / ) ), which quantifies the relative difference between normal and holiday ridership for each station.</p>
+<p>Across the top 5 stations, p‑values are generally below 0.05 and the percentage changes are strongly negative, indicating that the drop in ridership observed in August compared with January is unlikely to be due to random variability alone.<br>
+These t‑tests therefore confirm, in a formal statistical way, the conclusions from the exploratory analysis and the Shiny comparisons: holiday periods produce a significant and substantial reduction in daily rail usage at the busiest stations of the network.</p>
+</section>
+</section>
 </section>
 
 </main>
