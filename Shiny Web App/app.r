@@ -4,7 +4,7 @@ library(leaflet)
 library(scales)
 
 # --- 1. CHARGEMENT ET PRÉPARATION ---
-df <- readRDS("validations_geo_2018_2024_sample100k.rds")
+df <- readRDS("data_clean.rds")
 
 # Préparation Données Carte
 df_map <- df %>%
@@ -26,7 +26,7 @@ liste_depts <- sort(unique(df_map$DEPT))
 # --- 2. UI (Interface) ---
 ui <- fluidPage(
   theme = bslib::bs_theme(bootswatch = "flatly"),
-  titlePanel("🚇 Dashboard Trafic Île-de-France"),
+  titlePanel("Dashboard Trafic Île-de-France"),
   
   tabsetPanel(
     
@@ -36,11 +36,9 @@ ui <- fluidPage(
              sidebarLayout(
                sidebarPanel(
                  width = 3,
-                 h4("📍 Filtrer par Zone"),
+                 h4("Filtrer par Zone"),
                  selectizeInput("choix_dept", "Choisir Départements :", choices = liste_depts, multiple = TRUE, options = list(placeholder = 'Ex: 75, 92...')),
                  actionButton("btn_reset", "Voir tout", icon = icon("globe"), class="btn-sm btn-info"),
-                 hr(),
-                 wellPanel(h5("Aide Codes :"), tags$ul(tags$li("75 : Paris"), tags$li("92 : Hauts-de-Seine"), tags$li("77, 78... : Grande Couronne")))
                ),
                mainPanel(
                  leafletOutput("map_res", height = "500px"),
