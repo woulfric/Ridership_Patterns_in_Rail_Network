@@ -1,6 +1,6 @@
 library(tidyverse)
 library(lubridate)
-library(broom) # Pour rendre les résultats du t-test lisibles
+library(broom)
 
 # 1. Chargement des données
 df <- readRDS("data/final_data/data_clean.rds")
