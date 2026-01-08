@@ -54,6 +54,9 @@ The full analysis is implemented in a reproducible way inside this Quarto docume
 # 3. Response to the questions
 
 ## 3.1. Data preprocessing and cleaning
+Before performing any analysis, all raw IdFM files are processed by a dedicated R script `cleaning.R` stored in the project directory.  
+This script implements the full cleaning and aggregation pipeline described in Section 3.1 and produces the final dataset `data_clean.rds` that is used throughout the rest of the report.
+
 
 ### 3.1.1 Reading and concatenating raw yearly files
 
@@ -85,7 +88,8 @@ Inside this function, we first standardise the stop-area identifier by renaming 
 The function then enforces consistent data types across all years: network and stop codes are cast to character (``CODE_STIF_RES, CODE_STIF_ARRET``), the validation count NB_VALD is converted to integer, and the date JOUR is parsed as a Date using flexible formats (``ymd`` or ``dmy``).
 Once ``clean_valid_type()`` has been applied to all elements of liste_dfs via purrr::map(), the cleaned tables are concatenated row-wise with bind_rows() to form a single historical dataset ``df`` covering all days, stops and ticket categories between 2018 and 2024.
 ```{r}
-
+#| label: clean-types-illustration
+#| eval: false
 clean_valid_type <- function(df) {
   df %>%
     rename_with(~ ifelse(. %in% c("lda", "ID_ZDC"), "ID_REFA_LDA", .)) %>%
@@ -115,6 +119,8 @@ Finally, the time span of the study is enforced by keeping only dates between 1 
 At this stage, ``df`` contains only valid records with non-missing stop and network codes, a non-missing validation count, and dates lying strictly inside the project period.
 
 ```{r}
+#| label: clean-missing-illustration
+#| eval: false
 nb_avant <- nrow(df)
 df <- df %>%
   filter(LIBELLE_ARRET != "Inconnu")
@@ -134,6 +140,8 @@ The main groups are: “Imagine R” (student passes), “Forfait Navigo” (sta
 
 This transformation reduces noise in the typology of tickets and allows comparisons between a small number of meaningful product families instead of many rarely used labels.
 ```{r}
+#| label: recode-tickets-illustration
+#| eval: false
 df <- df %>%
   mutate(CATEGORIE_TITRE = case_match(CATEGORIE_TITRE,
     
@@ -208,4 +216,110 @@ df_final <- df_agg %>%
 
 This final table df_final is the main input for all subsequent exploratory analyses and for the Shiny dashboard, since it combines daily ridership by stop-area with station names and geographic coordinates.
 
+
+
+
+
+
+
+## 3.2 Exploratory data analysis
+
+### 3.2.1 Daily network-wide ridership
+
+
+### 3.2 Exploratory data analysis
+
+The exploratory analysis uses the cleaned dataset `df` stored in `data_clean.rds` and rebuilt in `02_analysis.R`.  
+From this table, three aggregated indicators are computed to study global trends, monthly seasonality and potential outliers in daily ridership.
+
+### 3.2.1. Global
+The first indicator focuses on the overall evolution of rail ridership between 2018 and 2024.  
+Figure \@ref(fig:fig-trafic-global) displays the daily total number of validations on the network together with a smooth trend line, highlighting long-term changes in demand.
+
+```{r}
+#| label: fig-trafic-global
+#| echo: false
+#| fig-cap: "Global evolution of daily rail ridership in Île-de-France (2018–2024)."
+#| fig-width: 10
+#| fig-height: 5
+knitr::include_graphics("../graphes/2.1 dentence_globale.png")
+
+```
+The figure shows a high and relatively stable level of traffic in 2018–2019, followed by an abrupt collapse in 2020 when the first COVID‑19 lockdown is introduced, then a gradual recovery from 2021 onwards.
+Superimposed on this long-term pattern, strong weekly oscillations are visible, with higher validations on working days and lower levels on weekends, and several pronounced drops during summer and end‑of‑year periods that correspond to holiday effects and temporary disruptions.
+
+
+#### 3.2.2 Monthly seasonality
+
+To investigate seasonality, a monthly factor Mois is created from JOUR using month(JOUR, label = TRUE, abbr = TRUE), and daily totals are recomputed in the table trafic_mensuel.
+Figure @ref(fig:fig-trafic-month) summarises the distribution of daily ridership for each month over the 2018–2024 period using boxplots.
+
+```{r}
+#| label: fig-trafic-month
+#| echo: false
+#| fig-cap: "Seasonal profile of daily rail ridership by month (2018–2024)."
+#| fig-width: 10
+#| fig-height: 5
+knitr::include_graphics("../graphes/2.png")
+
+```
+The monthly boxplots reveal a clear seasonal pattern: winter and early spring months are associated with lower medians and longer lower tails, while September to November exhibit higher central values and more concentrated distributions.
+July and August, in contrast, show both lower median levels and a wider spread, confirming the strong reduction and increased variability of demand during summer holidays compared with the rest of the year.
+
+
+#### 3.2.3 Annual evolution and anomalous years
+
+Long-term evolution is summarised by constructing an annual table trafic_annuel, where Annee = year(JOUR) and Total = sum(NB_VALD) are computed for each calendar year, keeping only complete years up to 2024.
+Figure @ref(fig:fig-trafic-year) displays these totals as a bar chart, with the yearly volume of validations expressed in millions on top of each bar.
+
+```{r}
+#| label: fig-trafic-year
+#| echo: false
+#| fig-cap: "Yearly total validations on the rail network (2018–2024)"
+#| fig-width: 10
+#| fig-height: 5
+knitr::include_graphics("../graphes/2. tendence_blobale.png")
+
+```
+
+This annual view confirms that 2019 is the last “normal” pre‑pandemic year with high ridership, while 2020 stands out as a clear anomalous year with a drastic drop in traffic.
+Subsequent years show a progressive rebound in 2021 and 2022, a level in 2023 slightly above 2019, and a lower total in 2024, indicating that ridership has not yet fully stabilised and that the impact of the pandemic remains visible in the long-term statistics.
+
+
+
+
+
+## 3.3 Comparison with a reference week
+
+### 3.3.1 Building daily profiles
+
+To compare “normal” and “holiday” periods, we first construct a daily ridership table `df_jour` by grouping `df` by `JOUR` and summing `NB_VALD` into `Total_Reseau`.  
+For each date, we derive additional variables: the calendar year `Annee`, the month `Mois`, and the day of week `Jour_Semaine`, computed with `wday(JOUR, label = TRUE, abbr = FALSE, week_start = 1)` so that weeks always start on Monday.
+
+Because 2020 is strongly affected by the COVID-19 crisis, it is excluded from the computation of historical averages, yielding a cleaned table `df_clean_stats` defined as `df_jour %>% filter(Annee != 2020)`.[1][2]
+
+### 3.3.2 Definition of benchmark and average weeks
+
+Four different weekly profiles are then constructed:
+
+- A benchmark week `profil_benchmark`, corresponding to the period from 4 to 10 March 2019 (`2019-03-04` to `2019-03-10`), which is chosen as a typical pre-COVID working week without holidays or major disruptions.  
+  This profile keeps the original `Total_Reseau` by `Jour_Semaine` and labels all rows with `Type = "1. Benchmark (Mars 2019)"`.
+
+- A working-week profile `profil_travail`, defined by filtering `df_clean_stats` to “working” months (`Mois` in `c(1, 2, 3, 11)`), then averaging `Total_Reseau` by `Jour_Semaine` using `summarise(Valeur = mean(Total_Reseau))`.  
+  This profile is tagged as `Type = "2. Semaine Travail (Moyenne)"`.
+
+- A holiday-week profile `profil_vacances`, built by restricting `df_clean_stats` to the summer months July and August (`Mois` in `c(7, 8)`), and again computing the mean `Total_Reseau` by `Jour_Semaine`.  
+  The result is labelled `Type = "3. Semaine Vacances (Moyenne)"`.
+
+- A global average week `profil_global`, which aggregates `df_clean_stats` by `Jour_Semaine` over the whole 2018–2024 period (excluding 2020), yielding `Valeur = mean(Total_Reseau)` and the label `Type = "4. Semaine Globale (Moyenne)"`.
+
+The four profiles are concatenated into a single table `donnees_comparatives` using `bind_rows()`, ready for visual comparison.
+
+### 3.3.3 Visual comparison of weekly ridership
+
+The weekly profiles are plotted with `ggplot(donnees_comparatives, aes(x = Jour_Semaine, y = Valeur, color = Type, group = Type))`, using `geom_line()` and `geom_point()` to draw one coloured line per profile.  
+A customised colour palette (`scale_color_manual()`) assigns black to the benchmark week, red to the working-week average, green to the holiday-week average and blue to the global average, while `theme_minimal()` and a bottom legend (`theme(legend.position = "bottom")`) ensure readability.
+
+The resulting figure clearly shows the typical weekly structure of the network, with higher ridership from Monday to Friday, a drop on Saturday and an even lower level on Sunday.  
+It also highlights the impact of holidays: the “working-week” curve lies consistently above the global average, whereas the “holiday-week” curve is significantly lower on all days of the week, quantifying the reduction in demand during summer periods.
 
