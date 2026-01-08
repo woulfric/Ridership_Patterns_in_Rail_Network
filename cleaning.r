@@ -315,3 +315,9 @@ write_csv(df, "data/final_data/validations_geo_2018_2024.csv")
 saveRDS(df_final, "data/final_data/data_clean.rds", compress = "xz")
 
 
+df <- readRDS("data/final_data/data_clean.rds")
+View(head(df))
+
+df_random <- df %>% slice_sample(n = 100000)
+
+write_csv(df_random, "data/final_data/validations_geo_2018_2024_sample100k.csv")
