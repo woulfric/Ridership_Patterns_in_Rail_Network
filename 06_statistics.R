@@ -2,10 +2,9 @@ library(tidyverse)
 library(lubridate)
 library(broom)
 
-# 1. Chargement des données
 df <- readRDS("data/final_data/data_clean.rds")
 
-# 2. Préparation : On définit les périodes "Travail" vs "Vacances"
+# Préparation : On définit les périodes "Travail" vs "Vacances"
 # On prend Janvier (Hors 1er janv) comme "Travail" et Août comme "Vacances"
 df_stat <- df %>%
   mutate(
@@ -19,7 +18,7 @@ df_stat <- df %>%
     Periode = ifelse(Mois == 1, "Normal (Janvier)", "Vacances (Août)")
   )
 
-# 3. Sélection du TOP 5 des Gares (pour ne pas faire le calcul sur 500 gares)
+# Sélection du TOP 5 des Gares (pour ne pas faire le calcul sur 500 gares)
 top_5_gares <- df_stat %>%
   group_by(NOM_GARE) %>%
   summarise(Total = sum(NB_VALD)) %>%
@@ -33,10 +32,8 @@ print(top_5_gares)
 df_focus <- df_stat %>% filter(NOM_GARE %in% top_5_gares)
 
 
-# ==============================================================================
 # ETAPE 1 : STATISTIQUES DESCRIPTIVES (Moyennes & Écarts-Types)
-# Comme demandé : "Calcul de moyennes et écarts-type par période"
-# ==============================================================================
+# Calcul de moyennes et écarts-type par période
 
 stats_descriptives <- df_focus %>%
   group_by(NOM_GARE, Periode) %>%
@@ -51,10 +48,9 @@ print("--- Tableau des Moyennes (à mettre dans le rapport) ---")
 print(stats_descriptives)
 
 
-# ==============================================================================
 # ETAPE 2 : LE T-TEST (Validation Statistique)
-# Comme demandé : "Applique un test de comparaison de moyennes (t-test)"
-# ==============================================================================
+# Applique un test de comparaison de moyennes (t-test)
+
 
 print("--- Résultats des T-Tests par Gare ---")
 
@@ -66,7 +62,7 @@ resultats_tests <- df_focus %>%
     t_test = list(t.test(NB_VALD ~ Periode, data = cur_data())),
     .groups = "drop"
   ) %>%
-  # On nettoie les résultats pour avoir un joli tableau
+  # On nettoie les résultats
   mutate(res = map(t_test, broom::tidy)) %>%
   unnest(res) %>%
   select(NOM_GARE, p.value, estimate1, estimate2) %>%
@@ -76,10 +72,4 @@ resultats_tests <- df_focus %>%
     Baisse_Pct = round(((estimate2 - estimate1) / estimate1) * 100, 1)
   )
 
-# Affichage propre pour ton rapport
 print(resultats_tests)
-
-# Petit message d'aide à l'interprétation
-print("INTERPRÉTATION :")
-print("Si 'Significatif' est OUI, cela veut dire que la baisse observée n'est pas due au hasard.")
-print("estimate1 = Moyenne Vacances, estimate2 = Moyenne Normale")

@@ -3,8 +3,8 @@ library(tidyverse)
 library(leaflet)
 library(scales)
 
-# --- 1. CHARGEMENT ET PRÉPARATION ---
 df <- readRDS("data_clean.rds")
+
 
 # Préparation Données Carte
 df_map <- df %>%
@@ -23,7 +23,7 @@ df_map <- df %>%
 
 liste_depts <- sort(unique(df_map$DEPT))
 
-# --- 2. UI (Interface) ---
+# UI 
 ui <- fluidPage(
   theme = bslib::bs_theme(bootswatch = "flatly"),
   titlePanel("Dashboard Trafic Île-de-France"),
@@ -48,7 +48,7 @@ ui <- fluidPage(
              )
     ),
     
-    # === ONGLET 2 : COMPARATEUR (Avec Auto-Correcteur) ===
+    # === ONGLET 2 : COMPARATEUR ===
     tabPanel("Comparaison de Périodes", icon = icon("chart-bar"),
              br(),
              sidebarLayout(
@@ -70,10 +70,9 @@ ui <- fluidPage(
   )
 )
 
-# --- 3. SERVER ---
+# ---  SERVER ---
 server <- function(input, output, session) {
   
-  # === NOUVEAU : AUTO-CORRECTEUR DE DATES ===
   # Fonction qui vérifie et corrige les dates
   corriger_dates <- function(input_id, date_range) {
     debut <- date_range[1]
@@ -83,7 +82,6 @@ server <- function(input, output, session) {
     # week_start = 1 signifie Lundi
     debut_clean <- floor_date(debut, "week", week_start = 1)
     fin_clean <- ceiling_date(fin, "week", week_start = 1) - days(1) 
-    # (ceiling donne le lundi d'après, donc on enlève 1 jour pour avoir dimanche)
     
     # Si les dates ne sont pas déjà "propres", on force la mise à jour
     if (debut != debut_clean || fin != fin_clean) {
@@ -95,9 +93,6 @@ server <- function(input, output, session) {
   # On surveille les changements de dates et on applique la correction
   observeEvent(input$date_ref, { corriger_dates("date_ref", input$date_ref) })
   observeEvent(input$date_comp, { corriger_dates("date_comp", input$date_comp) })
-
-  
-  # === RESTE DU CODE (CARTE & GRAPHIQUES) ===
   
   data_map_filtered <- reactive({
     if (is.null(input$choix_dept)) return(df_map) else return(df_map %>% filter(DEPT %in% input$choix_dept))

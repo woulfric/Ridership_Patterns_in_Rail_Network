@@ -2,15 +2,12 @@ library(tidyverse)
 library(lubridate)
 library(scales)
 
-# 0. CRÉATION DU DOSSIER POUR LES IMAGES
-if(!dir.exists("img")) dir.create("img")
 
-# 1. CHARGEMENT DES DONNÉES
+if(!dir.exists("img")) dir.create("img")
 df <- readRDS("data/final_data/data_clean.rds")
 
-# ==============================================================================
+
 # GRAPHIQUE 1 : HISTORIQUE QUOTIDIEN (TIME SERIES)
-# ==============================================================================
 
 trafic_jour <- df %>%
   group_by(JOUR) %>%
@@ -18,19 +15,19 @@ trafic_jour <- df %>%
 
 idf_color <- "#18458A"
 
-# On stocke le graph dans 'p1'
+
 p1 <- ggplot(trafic_jour, aes(x = JOUR, y = Total)) +
   
-  # COURBE & TENDANCE
+  # Courbe et tendance
   geom_line(color = idf_color, alpha = 0.6, lwd = 0.4) +
   geom_smooth(method = "loess", color = "#D9303E", span = 0.05, se = FALSE, lwd = 1) +
   
-  # ANNOTATION COVID
+  # Annotation Covid
   geom_vline(xintercept = as.Date("2020-03-17"), linetype = "dashed", color = "grey50") +
   annotate("text", x = as.Date("2020-03-17"), y = 100000, 
            label = "Confinement", angle = 90, vjust = -1, size = 3, color = "grey30") +
 
-  # DESIGN
+  # Desing
   theme_minimal(base_size = 14) +
   theme(
     plot.title = element_text(face = "bold", size = 16, color = "#2c3e50"),
@@ -40,7 +37,7 @@ p1 <- ggplot(trafic_jour, aes(x = JOUR, y = Total)) +
     axis.text = element_text(color = "grey30")
   ) +
   
-  # AXES & TITRES
+  # Axes et Titres
   labs(
     title = "Historique du trafic ferroviaire en Île-de-France",
     subtitle = "Évolution quotidienne des validations (2018 - 2024)",
@@ -51,7 +48,7 @@ p1 <- ggplot(trafic_jour, aes(x = JOUR, y = Total)) +
   scale_y_continuous(labels = label_number(scale = 1e-6, suffix = " M")) +
   scale_x_date(date_breaks = "1 year", date_labels = "%Y") +
   
-  # LE ZOOM
+  # On ajoute un zoom
   coord_cartesian(xlim = c(min(trafic_jour$JOUR), as.Date("2024-12-31")))
 
 # Affichage et Sauvegarde
@@ -59,16 +56,14 @@ print(p1)
 ggsave("img/1_historique_trafic.png", plot = p1, width = 10, height = 6, dpi = 300)
 
 
-# ==============================================================================
 # GRAPHIQUE 2 : PROFIL SAISONNIER (BOXPLOT)
-# ==============================================================================
 
 trafic_mensuel <- df %>%
   mutate(Mois = month(JOUR, label = TRUE, abbr = TRUE)) %>%
   group_by(JOUR, Mois) %>%
   summarise(Total = sum(NB_VALD, na.rm = TRUE), .groups = "drop")
 
-# On stocke dans 'p2'
+
 p2 <- ggplot(trafic_mensuel, aes(x = Mois, y = Total, fill = Mois)) +
   geom_boxplot(outlier.alpha = 0.2, outlier.color = "red", show.legend = FALSE) +
   theme_minimal(base_size = 14) +
@@ -86,9 +81,8 @@ print(p2)
 ggsave("img/2_saisonnalite_mensuelle.png", plot = p2, width = 10, height = 6, dpi = 300)
 
 
-# ==============================================================================
+
 # GRAPHIQUE 3 : TRAFIC ANNUEL (BARPLOT)
-# ==============================================================================
 
 trafic_annuel <- df %>%
   mutate(Annee = year(JOUR)) %>%
@@ -96,7 +90,6 @@ trafic_annuel <- df %>%
   summarise(Total = sum(NB_VALD, na.rm = TRUE)) %>%
   filter(Annee <= 2024)
 
-# On stocke dans 'p3'
 p3 <- ggplot(trafic_annuel, aes(x = factor(Annee), y = Total)) +
   geom_col(fill = "steelblue", width = 0.7) +
   geom_text(aes(label = round(Total / 1e6, 1)), vjust = -0.5, color = "black") +
@@ -114,9 +107,7 @@ print(p3)
 ggsave("img/3_trafic_annuel.png", plot = p3, width = 8, height = 6, dpi = 300)
 
 
-# ==============================================================================
 # GRAPHIQUE 4 : COMPARATIF BENCHMARK (LINE CHART)
-# ==============================================================================
 
 # Préparation
 df_jour <- df %>%
@@ -155,7 +146,7 @@ profil_global <- df_clean_stats %>%
 
 donnees_comparatives <- bind_rows(profil_benchmark, profil_travail, profil_vacances, profil_global)
 
-# On stocke dans 'p4'
+
 p4 <- ggplot(donnees_comparatives, aes(x = Jour_Semaine, y = Valeur, color = Type, group = Type)) +
   geom_line(linewidth = 1.2) +
   geom_point(size = 2) +

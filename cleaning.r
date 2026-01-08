@@ -1,10 +1,11 @@
 library(tidyverse)
 
+
 # Ouverture des fichiers CSV
 
+#on enleve les fichiers 2025 car incomplet
 # validation_1_trim_2025 = read.csv("data/validations-reseau-ferre-nombre-validations-par-jour-1er-trimestre.csv", sep = ";")
 # validation_2_trim_2025 = read.csv("data/validations-reseau-ferre-nombre-validations-par-jour-2eme-trimestre.csv", sep = ";")
-
 # View(head(validation_1_trim_2025))
 # View(head(validation_2_trim_2025))
 
@@ -33,6 +34,7 @@ validation_2_trim_2022 = read.delim("data/data-rf-2022/2022_S2_NB_FER.txt", sep 
 
 #2023
 validation_1_trim_2023 = read.delim("data/data-rf-2023/2023_S1_NB_FER .txt")
+# on ajoute un encodage car il est different du reste des fichiers
 validation_2_trim_2023 = read.delim("data/data-rf-2023/2023_S2_NB_FER.txt", fileEncoding = "UTF-16LE")
 
 #2024
@@ -52,24 +54,20 @@ liste_dfs <- list(
   validation_1_trim_2024, validation_2_trim_2024
 )
 
+
+# Affiche le type de chaque colonne
 for (i in 1:length(liste_dfs)) {
-  
   print(paste("--- FICHIER N°", i, "---"))
-  
-  # Affiche le type de chaque colonne
   print(sapply(liste_dfs[[i]], class))
-  
 }
 
-
+# Fonction de nettoyage des types
 clean_valid_type <- function(df) {
   df %>%
-    # --- CORRECTION ICI ---
-    # On parcourt TOUS les noms de colonnes (.)
-    # Si le nom est dans la liste des intrus, on le change. Sinon on garde l'original.
+    # --- ETAPE 1 : Renommage des colonnes
     rename_with(~ ifelse(. %in% c("lda", "ID_ZDC"), "ID_REFA_LDA", .)) %>%
     
-    # --- ETAPE 2 : Types ---
+    # --- ETAPE 2 : Types
     mutate(
       CODE_STIF_RES   = as.character(CODE_STIF_RES),
       CODE_STIF_ARRET = as.character(CODE_STIF_ARRET),
@@ -80,24 +78,23 @@ clean_valid_type <- function(df) {
 
 liste_dfs_clean <- map(liste_dfs, clean_valid_type)
 
+
+# Affiche le type de chaque colonne
 for (i in 1:length(liste_dfs_clean)) {
-  
   print(paste("--- FICHIER N°", i, "---"))
-  
-  # Affiche le type de chaque colonne
   print(sapply(liste_dfs_clean[[i]], class))
-  
 }
 
+# On combine tous les dataframes en un seul
 df <- bind_rows(liste_dfs_clean)
 View(head(validation_2_trim_2022))
 
-# Export du fichier avant nettoyage
+
+# Export du fichier avant nettoyage pour backup
 if (!dir.exists("data/final_data")) {
   dir.create("data/final_data")
 }
 write_csv(df, "data/final_data/validations_raw_2018_2024.csv")
-
 
 
 #________________________nettoyage des données________________________
@@ -105,38 +102,6 @@ write_csv(df, "data/final_data/validations_raw_2018_2024.csv")
 
 print("--- Valeurs manquantes par colonne ---")
 print(colSums(is.na(df)))
-
-# dico_arrets <- df %>%
-#   # On sélectionne les 3 colonnes d'intérêt
-#   select(LIBELLE_ARRET, CODE_STIF_ARRET, CODE_STIF_RES) %>%
-  
-#   # On nettoie les vides
-#   filter(
-#     !is.na(LIBELLE_ARRET) & LIBELLE_ARRET != "",
-#     !is.na(CODE_STIF_ARRET) & CODE_STIF_ARRET != "",
-#     !is.na(CODE_STIF_RES) & CODE_STIF_RES != ""
-#   ) %>%
-#   # On ne garde que les combinaisons uniques
-#   distinct() %>%
-
-#   # On trie par nom de gare pour que ce soit propre
-#   arrange(LIBELLE_ARRET, CODE_STIF_RES, CODE_STIF_ARRET)
-
-# View(dico_arrets)
-
-
-# #pour afficher tout les arret avec leur code stif et reseau
-# vision_groupee <- dico_arrets %>%
-#   group_by(LIBELLE_ARRET) %>%
-#   summarise(
-#     Liste_Codes_Arret = paste(unique(CODE_STIF_ARRET), collapse = ", "),
-#     Liste_Reseaux     = paste(unique(CODE_STIF_RES), collapse = ", "),
-#     Nombre_Codes      = n()
-#   ) %>%
-#   arrange(desc(Nombre_Codes)) # Affiche en premier les gares qui ont le plus de codes
-
-# View(vision_groupee)
-
 
 
 # On isole les lignes qui posent problème
@@ -154,6 +119,7 @@ View(lignes_a_probleme)
 nb_avant <- nrow(df)
 df <- df %>%
   filter(LIBELLE_ARRET != "Inconnu")
+
 
 # Bilan
 nb_apres <- nrow(df)
@@ -194,11 +160,12 @@ df <- df %>%
   ))
 
 # --- VÉRIFICATION ---
-print("--- Nouvelles catégories (avec FGT séparé) ---")
+print("--- Nouvelles catégories ---")
 df %>% count(CATEGORIE_TITRE, sort = TRUE)
 
 # Affichage des catégories distinctes
 print(df %>% distinct(CATEGORIE_TITRE))
+
 
 
 # Analyse de la colonne NB_VALD
@@ -210,18 +177,16 @@ View(lignes_na_validations)
 
 print("--- Résumé statistique avant nettoyage ---")
 summary(df$NB_VALD)
-
 print(paste("Nombre de valeurs manquantes (NA) :", sum(is.na(df$NB_VALD))))
 
-# On regarde s'il y a des valeurs négatives (impossible logiquement)
+# On verifie s'il y a des valeurs négatives
 print(paste("Nombre de valeurs négatives :", sum(df$NB_VALD < 0, na.rm = TRUE)))
 
 
 n_avant <- nrow(df)
-df <- df %>%
 
-  # On supprime tout ce qui est NA (les anciens textes + les vides)
-  filter(!is.na(NB_VALD))
+# On supprime tout ce qui est NA
+df <- df %>% filter(!is.na(NB_VALD))
 
 # Bilan
 n_apres <- nrow(df)
@@ -229,11 +194,12 @@ print(paste("Lignes supprimées :", n_avant - n_apres))
 print(paste("Lignes restantes :", n_apres))
 
 
-# --- VÉRIFICATION FINALE --- on enleve les date inferieure à 2018-01-01
+# On enleve les date inferieure à 2018-01-01
 df <- df %>%
   filter(JOUR >= as.Date("2018-01-01") & JOUR <= as.Date("2024-12-31"))
 
 nrow(df)
+
 
 # Export du fichier apres nettoyage
 if (!dir.exists("data/final_data")) {
@@ -241,15 +207,15 @@ if (!dir.exists("data/final_data")) {
 }
 write_csv(df, "data/final_data/validations_clean_2018_2024.csv")
 
+
 # _____________________Agregation finale_______________________
 library(sf)
 
 nrow(df)
-View(head(df))
+# View(head(df))
 
-# On joint les données géographiques au dataframe principal
+# On groupe par date, par lieu
 df_agg <- df %>%
-  # On groupe par date, par lieu (ZdA) et par type de titre
   group_by(JOUR, ID_REFA_LDA) %>%
   
   # On somme les validations pour réduire le nombre de lignes
@@ -259,11 +225,9 @@ df_agg <- df %>%
   )
 
 nrow(df_agg)
-View(head(df_agg, 100))
+# View(head(df_agg, 100))
 
-#_________________On a enlever le type de titre dans le group by se qui fait qu'on a beaucoup moin de données______________________
-
-library(sf)
+# Chargement des données géographiques (shapefile des zones LDA)
 
 geo_shp <- st_read("data/geo/PL_ZDL_R_07-01-2026.shp")
 View(head(geo_shp))
@@ -276,15 +240,18 @@ geo_clean <- geo_shp %>%
     # On récupère les coordonnées X et Y
     LON = st_coordinates(.)[,1],
     LAT = st_coordinates(.)[,2],
+
     # On s'assure que l'ID est numérique pour la jointure
     ID_REFA_LDA = as.numeric(idrefa_lda)
   ) %>%
-  # On garde uniquement les infos utiles et on enlève la géométrie lourde
+
+  # On garde uniquement les infos utiles
   st_drop_geometry() %>%
   select(ID_REFA_LDA, NOM_GARE = nom_lda, VILLE = commune, LON, LAT) %>%
-  # On supprime les éventuels doublons de zone
   distinct(ID_REFA_LDA, .keep_all = TRUE)
 
+
+# Jointure des données agrégées avec les données géographiques
 df_final <- df_agg %>%
   ungroup() %>%
   left_join(geo_clean, by = "ID_REFA_LDA")
@@ -298,4 +265,5 @@ if (!dir.exists("data/final_data")) {
   dir.create("data/final_data")
 }
 write_csv(df_final, "data/final_data/validations_geo_2018_2024.csv")
+# Sauvegarde en format RDS compressé
 saveRDS(df_final, "data/final_data/data_clean.rds", compress = "xz")
