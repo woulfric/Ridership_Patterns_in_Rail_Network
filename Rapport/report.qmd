@@ -242,7 +242,7 @@ Figure \@ref(fig:fig-trafic-global) displays the daily total number of validatio
 #| fig-cap: "Global evolution of daily rail ridership in Île-de-France (2018–2024)."
 #| fig-width: 10
 #| fig-height: 5
-knitr::include_graphics("../graphes/2.1 dentence_globale.png")
+knitr::include_graphics("../img/1_historique_trafic.png")
 
 ```
 The figure shows a high and relatively stable level of traffic in 2018–2019, followed by an abrupt collapse in 2020 when the first COVID‑19 lockdown is introduced, then a gradual recovery from 2021 onwards.
@@ -260,7 +260,7 @@ Figure @ref(fig:fig-trafic-month) summarises the distribution of daily ridership
 #| fig-cap: "Seasonal profile of daily rail ridership by month (2018–2024)."
 #| fig-width: 10
 #| fig-height: 5
-knitr::include_graphics("../graphes/2.png")
+knitr::include_graphics("../img/2_saisonnalite_mensuelle.png")
 
 ```
 The monthly boxplots reveal a clear seasonal pattern: winter and early spring months are associated with lower medians and longer lower tails, while September to November exhibit higher central values and more concentrated distributions.
@@ -278,7 +278,7 @@ Figure @ref(fig:fig-trafic-year) displays these totals as a bar chart, with the 
 #| fig-cap: "Yearly total validations on the rail network (2018–2024)"
 #| fig-width: 10
 #| fig-height: 5
-knitr::include_graphics("../graphes/2. tendence_blobale.png")
+knitr::include_graphics("../img/3_trafic_annuel.png")
 
 ```
 
@@ -294,7 +294,7 @@ Subsequent years show a progressive rebound in 2021 and 2022, a level in 2023 sl
 #### 3.3.1 Construction of daily and weekly profiles
 
 To compare “normal” and holiday periods, the cleaned dataset `df` is first aggregated by date into a daily table `df_jour`, where each row contains the total network ridership `Total_Reseau = sum(NB_VALD)` for a given `JOUR`.  
-For every day, we derive three additional variables: the calendar year `Annee = year(JOUR)`, the month `Mois = month(JOUR)`, and the day of week `Jour_Semaine = wday(JOUR, label = TRUE, abbr = FALSE, week_start = 1)`, which ensures that all weekly profiles start on Monday. [web:56]
+For every day, we derive three additional variables: the calendar year `Annee = year(JOUR)`, the month `Mois = month(JOUR)`, and the day of week `Jour_Semaine = wday(JOUR, label = TRUE, abbr = FALSE, week_start = 1)`, which ensures that all weekly profiles start on Monday. 
 
 Because 2020 is heavily affected by the COVID‑19 crisis, this year is excluded from the computation of historical averages, leading to a filtered table `df_clean_stats = df_jour %>% filter(Annee != 2020)`.  
 All weekly profiles used in the comparison are then derived from `df_jour` and `df_clean_stats` by averaging `Total_Reseau` by `Jour_Semaine` under different calendar conditions.
@@ -322,14 +322,81 @@ The four profiles are concatenated with `bind_rows()` into a single table `donne
 #| fig-cap: "Benchmark and average weekly ridership profiles (excluding 2020)."
 #| fig-width: 10
 #| fig-height: 6
-knitr::include_graphics("../graphes/4.png")
+knitr::include_graphics("../img/4_comparatif_benchmark.png")
 ```
 
 #### 3.3.3 Interpretation of the weekly comparison
 
 The weekly profiles plotted in Figure \@ref(fig:fig-profils-hebdo) all share the same general shape: ridership increases from Monday to Thursday, reaches its highest level on Thursday and Friday, then drops sharply on Saturday and even more on Sunday.  
-This confirms that the rail network is primarily driven by commuting activity on weekdays, with weekends systematically showing much lower demand. [web:56]
+This confirms that the rail network is primarily driven by commuting activity on weekdays, with weekends systematically showing much lower demand. 
 
 Comparing the four curves highlights the impact of holidays on travel behaviour.  
 The working-week average lies slightly above both the benchmark and the global average on most weekdays, reflecting that dense working periods generate the highest volumes.  
 In contrast, the holiday-week profile is clearly below the other curves for every day of the week, with gaps of several hundred thousand validations on Mondays to Fridays, which quantifies the reduction in regular trips during summer and school holidays.
+
+
+
+
+## 3.4 Shiny dashboard
+
+All results of the previous sections are made available in an interactive Shiny dashboard, deployed online at:  
+`https://zkoufw-kamell@yennek.shinyapps.io/shiny_web_app/`  *(URL à adapter si nécessaire)*.  
+
+The application is built in a single script `app.R` that loads the cleaned dataset `data_clean.rds` and provides two main tabs: a geographical exploration of stations and a weekly comparison tool.
+
+### 3.4.1 Global structure of the app
+
+At start-up, the server reads `df <- readRDS("data_clean.rds")` and prepares a station-level table `df_map` by grouping by `NOM_GARE` and `ID_REFA_LDA`.  
+For each station, the mean daily ridership `Trafic_Moyen`, longitude `LON`, latitude `LAT` and a department code `DEPT` (first two digits of `VILLE`) are computed, which are used to filter and size markers on the map. [web:56]
+
+The user interface is organised with `tabsetPanel()` into two tabs:  
+- “Exploration Géographique” for spatial filtering and station selection,  
+- “Comparaison de Périodes” for comparing two weeks day by day.  
+
+```{r}
+#| label: fig-dashboard-overview
+#| echo: false
+#| fig-cap: "Overall layout of the Shiny dashboard with the two main tabs."
+#| fig-width: 10
+#| fig-height: 5
+knitr::include_graphics("../img/Dashboard.webp")
+```
+
+### 3.4.2 Geographical exploration and station trends
+
+The “Exploration Géographique” tab uses `leaflet` to display one circle marker per station, with radius proportional to `sqrt(Trafic_Moyen)` and colour based on a fixed palette.  
+A `selectizeInput("choix_dept")` lets the user filter stations by department, and the “Voir tout” button resets the selection; the map is automatically zoomed to the selected area using `fitBounds()`. 
+
+When the user clicks on a station, the server filters `df` for the chosen `NOM_GARE`, aggregates daily totals by `JOUR`, and generates a local time series with `geom_line()` and `geom_smooth(method = "loess")`.  
+This provides an immediate view of how ridership at this specific station has evolved between 2018 and 2024, while the default message invites the user to click on the map if no station is selected. 
+
+```{r}
+#| label: fig-dashboard-map
+#| echo: false
+#| fig-cap: "Geographical tab: department filter and interactive map of stations."
+#| fig-width: 10
+#| fig-height: 5
+knitr::include_graphics("../img/Filtrage.webp")
+```
+
+```{r}
+#| label: fig-dashboard-station
+#| echo: false
+#| fig-cap: "Time series of daily validations for a station selected on the map."
+#| fig-width: 10
+#| fig-height: 5
+knitr::include_graphics("../img/Selection_semaine.webp")
+```
+
+### 3.4.3 Weekly comparison of two periods
+
+The “Comparaison de Périodes” tab focuses on deviations from a normal week, as required in the assignment.  
+Two `dateRangeInput` widgets (`date_ref` and `date_comp`) allow the user to choose a reference period and a comparison period, while the helper function `corriger_dates()` automatically adjusts these selections to full weeks (Monday to Sunday) using `floor_date()` and `ceiling_date()`, with a notification indicating the correction. [web:56]
+
+When the button “Comparer les périodes” is clicked, the server builds `comparaison_data()` by:  
+- aggregating `NB_VALD` by `JOUR` inside each period,  
+- deriving `Jour_Semaine` with `wday()`,  
+- computing the mean daily ridership by day of week for the reference and comparison periods.  
+
+The results are displayed as a bar chart (`geom_col(position = "dodge")`) comparing the two periods for each weekday, and in a summary table where the relative change is given as a percentage.  
+This tool lets users quantify, for example, how a holiday week differs from a normal pre‑COVID week, both visually and numerically for each day of the week. 

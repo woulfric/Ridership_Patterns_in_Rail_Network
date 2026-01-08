@@ -290,7 +290,7 @@ Figure @ref(fig:fig-trafic-global) displays the daily total number of validation
 <div id="fig-trafic-global" class="quarto-float quarto-figure quarto-figure-center anchored">
 <figure class="quarto-float quarto-float-fig figure">
 <div aria-describedby="fig-trafic-global-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
-<img src="../graphes/2.1%20dentence_globale.png" class="img-fluid figure-img" width="400">
+<img src="../img/1_historique_trafic.png" class="img-fluid figure-img" width="1500">
 </div>
 <figcaption class="quarto-float-caption-bottom quarto-float-caption quarto-float-fig" id="fig-trafic-global-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
 Figure&nbsp;1: Global evolution of daily rail ridership in Île-de-France (2018–2024).
@@ -308,7 +308,7 @@ Figure&nbsp;1: Global evolution of daily rail ridership in Île-de-France (2018�
 <div id="fig-trafic-month" class="quarto-float quarto-figure quarto-figure-center anchored">
 <figure class="quarto-float quarto-float-fig figure">
 <div aria-describedby="fig-trafic-month-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
-<img src="../graphes/2.png" class="img-fluid figure-img" width="400">
+<img src="../img/2_saisonnalite_mensuelle.png" class="img-fluid figure-img" width="1500">
 </div>
 <figcaption class="quarto-float-caption-bottom quarto-float-caption quarto-float-fig" id="fig-trafic-month-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
 Figure&nbsp;2: Seasonal profile of daily rail ridership by month (2018–2024).
@@ -327,7 +327,7 @@ Figure&nbsp;2: Seasonal profile of daily rail ridership by month (2018–2024).
 <div id="fig-trafic-year" class="quarto-float quarto-figure quarto-figure-center anchored">
 <figure class="quarto-float quarto-float-fig figure">
 <div aria-describedby="fig-trafic-year-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
-<img src="../graphes/2.%20tendence_blobale.png" class="img-fluid figure-img" width="400">
+<img src="../img/3_trafic_annuel.png" class="img-fluid figure-img" width="1200">
 </div>
 <figcaption class="quarto-float-caption-bottom quarto-float-caption quarto-float-fig" id="fig-trafic-year-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
 Figure&nbsp;3: Yearly total validations on the rail network (2018–2024)
@@ -344,7 +344,7 @@ Figure&nbsp;3: Yearly total validations on the rail network (2018–2024)
 <section id="construction-of-daily-and-weekly-profiles" class="level4">
 <h4 class="anchored" data-anchor-id="construction-of-daily-and-weekly-profiles">3.3.1 Construction of daily and weekly profiles</h4>
 <p>To compare “normal” and holiday periods, the cleaned dataset <code>df</code> is first aggregated by date into a daily table <code>df_jour</code>, where each row contains the total network ridership <code>Total_Reseau = sum(NB_VALD)</code> for a given <code>JOUR</code>.<br>
-For every day, we derive three additional variables: the calendar year <code>Annee = year(JOUR)</code>, the month <code>Mois = month(JOUR)</code>, and the day of week <code>Jour_Semaine = wday(JOUR, label = TRUE, abbr = FALSE, week_start = 1)</code>, which ensures that all weekly profiles start on Monday. [web:56]</p>
+For every day, we derive three additional variables: the calendar year <code>Annee = year(JOUR)</code>, the month <code>Mois = month(JOUR)</code>, and the day of week <code>Jour_Semaine = wday(JOUR, label = TRUE, abbr = FALSE, week_start = 1)</code>, which ensures that all weekly profiles start on Monday.</p>
 <p>Because 2020 is heavily affected by the COVID‑19 crisis, this year is excluded from the computation of historical averages, leading to a filtered table <code>df_clean_stats = df_jour %&gt;% filter(Annee != 2020)</code>.<br>
 All weekly profiles used in the comparison are then derived from <code>df_jour</code> and <code>df_clean_stats</code> by averaging <code>Total_Reseau</code> by <code>Jour_Semaine</code> under different calendar conditions.</p>
 </section>
@@ -366,7 +366,7 @@ This profile is tagged as <code>Type = "3. Semaine Vacances (Moyenne)"</code>.</
 <div id="fig-profils-hebdo" class="quarto-float quarto-figure quarto-figure-center anchored">
 <figure class="quarto-float quarto-float-fig figure">
 <div aria-describedby="fig-profils-hebdo-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
-<img src="../graphes/4.png" class="img-fluid figure-img" width="400">
+<img src="../img/4_comparatif_benchmark.png" class="img-fluid figure-img" width="1500">
 </div>
 <figcaption class="quarto-float-caption-bottom quarto-float-caption quarto-float-fig" id="fig-profils-hebdo-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
 Figure&nbsp;4: Benchmark and average weekly ridership profiles (excluding 2020).
@@ -379,11 +379,85 @@ Figure&nbsp;4: Benchmark and average weekly ridership profiles (excluding 2020).
 <section id="interpretation-of-the-weekly-comparison" class="level4">
 <h4 class="anchored" data-anchor-id="interpretation-of-the-weekly-comparison">3.3.3 Interpretation of the weekly comparison</h4>
 <p>The weekly profiles plotted in Figure @ref(fig:fig-profils-hebdo) all share the same general shape: ridership increases from Monday to Thursday, reaches its highest level on Thursday and Friday, then drops sharply on Saturday and even more on Sunday.<br>
-This confirms that the rail network is primarily driven by commuting activity on weekdays, with weekends systematically showing much lower demand. [web:56]</p>
+This confirms that the rail network is primarily driven by commuting activity on weekdays, with weekends systematically showing much lower demand.</p>
 <p>Comparing the four curves highlights the impact of holidays on travel behaviour.<br>
 The working-week average lies slightly above both the benchmark and the global average on most weekdays, reflecting that dense working periods generate the highest volumes.<br>
 In contrast, the holiday-week profile is clearly below the other curves for every day of the week, with gaps of several hundred thousand validations on Mondays to Fridays, which quantifies the reduction in regular trips during summer and school holidays.</p>
 </section>
+</section>
+</section>
+<section id="shiny-dashboard" class="level2">
+<h2 class="anchored" data-anchor-id="shiny-dashboard">3.4 Shiny dashboard</h2>
+<p>All results of the previous sections are made available in an interactive Shiny dashboard, deployed online at:<br>
+<code>https://zkoufw-kamell@yennek.shinyapps.io/shiny_web_app/</code> <em>(URL à adapter si nécessaire)</em>.</p>
+<p>The application is built in a single script <code>app.R</code> that loads the cleaned dataset <code>data_clean.rds</code> and provides two main tabs: a geographical exploration of stations and a weekly comparison tool.</p>
+<section id="global-structure-of-the-app" class="level3">
+<h3 class="anchored" data-anchor-id="global-structure-of-the-app">3.4.1 Global structure of the app</h3>
+<p>At start-up, the server reads <code>df &lt;- readRDS("data_clean.rds")</code> and prepares a station-level table <code>df_map</code> by grouping by <code>NOM_GARE</code> and <code>ID_REFA_LDA</code>.<br>
+For each station, the mean daily ridership <code>Trafic_Moyen</code>, longitude <code>LON</code>, latitude <code>LAT</code> and a department code <code>DEPT</code> (first two digits of <code>VILLE</code>) are computed, which are used to filter and size markers on the map. [web:56]</p>
+<p>The user interface is organised with <code>tabsetPanel()</code> into two tabs:<br>
+- “Exploration Géographique” for spatial filtering and station selection,<br>
+- “Comparaison de Périodes” for comparing two weeks day by day.</p>
+<div class="cell">
+<div class="cell-output-display">
+<div id="fig-dashboard-overview" class="quarto-float quarto-figure quarto-figure-center anchored">
+<figure class="quarto-float quarto-float-fig figure">
+<div aria-describedby="fig-dashboard-overview-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+<img src="../img/Dashboard.webp" class="img-fluid figure-img">
+</div>
+<figcaption class="quarto-float-caption-bottom quarto-float-caption quarto-float-fig" id="fig-dashboard-overview-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+Figure&nbsp;5: Overall layout of the Shiny dashboard with the two main tabs.
+</figcaption>
+</figure>
+</div>
+</div>
+</div>
+</section>
+<section id="geographical-exploration-and-station-trends" class="level3">
+<h3 class="anchored" data-anchor-id="geographical-exploration-and-station-trends">3.4.2 Geographical exploration and station trends</h3>
+<p>The “Exploration Géographique” tab uses <code>leaflet</code> to display one circle marker per station, with radius proportional to <code>sqrt(Trafic_Moyen)</code> and colour based on a fixed palette.<br>
+A <code>selectizeInput("choix_dept")</code> lets the user filter stations by department, and the “Voir tout” button resets the selection; the map is automatically zoomed to the selected area using <code>fitBounds()</code>.</p>
+<p>When the user clicks on a station, the server filters <code>df</code> for the chosen <code>NOM_GARE</code>, aggregates daily totals by <code>JOUR</code>, and generates a local time series with <code>geom_line()</code> and <code>geom_smooth(method = "loess")</code>.<br>
+This provides an immediate view of how ridership at this specific station has evolved between 2018 and 2024, while the default message invites the user to click on the map if no station is selected.</p>
+<div class="cell">
+<div class="cell-output-display">
+<div id="fig-dashboard-map" class="quarto-float quarto-figure quarto-figure-center anchored">
+<figure class="quarto-float quarto-float-fig figure">
+<div aria-describedby="fig-dashboard-map-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+<img src="../img/Filtrage.webp" class="img-fluid figure-img">
+</div>
+<figcaption class="quarto-float-caption-bottom quarto-float-caption quarto-float-fig" id="fig-dashboard-map-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+Figure&nbsp;6: Geographical tab: department filter and interactive map of stations.
+</figcaption>
+</figure>
+</div>
+</div>
+</div>
+<div class="cell">
+<div class="cell-output-display">
+<div id="fig-dashboard-station" class="quarto-float quarto-figure quarto-figure-center anchored">
+<figure class="quarto-float quarto-float-fig figure">
+<div aria-describedby="fig-dashboard-station-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+<img src="../img/Selection_semaine.webp" class="img-fluid figure-img">
+</div>
+<figcaption class="quarto-float-caption-bottom quarto-float-caption quarto-float-fig" id="fig-dashboard-station-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+Figure&nbsp;7: Time series of daily validations for a station selected on the map.
+</figcaption>
+</figure>
+</div>
+</div>
+</div>
+</section>
+<section id="weekly-comparison-of-two-periods" class="level3">
+<h3 class="anchored" data-anchor-id="weekly-comparison-of-two-periods">3.4.3 Weekly comparison of two periods</h3>
+<p>The “Comparaison de Périodes” tab focuses on deviations from a normal week, as required in the assignment.<br>
+Two <code>dateRangeInput</code> widgets (<code>date_ref</code> and <code>date_comp</code>) allow the user to choose a reference period and a comparison period, while the helper function <code>corriger_dates()</code> automatically adjusts these selections to full weeks (Monday to Sunday) using <code>floor_date()</code> and <code>ceiling_date()</code>, with a notification indicating the correction. [web:56]</p>
+<p>When the button “Comparer les périodes” is clicked, the server builds <code>comparaison_data()</code> by:<br>
+- aggregating <code>NB_VALD</code> by <code>JOUR</code> inside each period,<br>
+- deriving <code>Jour_Semaine</code> with <code>wday()</code>,<br>
+- computing the mean daily ridership by day of week for the reference and comparison periods.</p>
+<p>The results are displayed as a bar chart (<code>geom_col(position = "dodge")</code>) comparing the two periods for each weekday, and in a summary table where the relative change is given as a percentage.<br>
+This tool lets users quantify, for example, how a holiday week differs from a normal pre‑COVID week, both visually and numerically for each day of the week.</p>
 </section>
 </section>
 </section>
