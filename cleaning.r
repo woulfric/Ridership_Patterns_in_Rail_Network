@@ -244,10 +244,13 @@ write_csv(df, "data/final_data/validations_clean_2018_2024.csv")
 # _____________________Agregation finale_______________________
 library(sf)
 
+nrow(df)
+View(head(df))
+
 # On joint les données géographiques au dataframe principal
 df_agg <- df %>%
   # On groupe par date, par lieu (ZdA) et par type de titre
-  group_by(JOUR, ID_REFA_LDA, CATEGORIE_TITRE) %>%
+  group_by(JOUR, ID_REFA_LDA) %>%
   
   # On somme les validations pour réduire le nombre de lignes
   summarise(
@@ -255,30 +258,12 @@ df_agg <- df %>%
     .groups = "drop"
   )
 
-View(head(df_agg))
+nrow(df_agg)
+View(head(df_agg, 100))
 
+#_________________On a enlever le type de titre dans le group by se qui fait qu'on a beaucoup moin de données______________________
 
-
-
-# # Import des données géographiques des zones d'arrêts
-# geo = read.csv("data/zones-d-arrets.csv", sep = ";")
-# View(head(geo, 100))
-
-# colnames(geo)
-
-# geo_clean <- geo %>%
-#   select(
-#     ID_REFA_LDA = ZdAId,      # On renomme ZdAId -> ID_REFA_LDA
-#     NOM_GARE = ZdAName,       # On renomme pour que ce soit parlant
-#     VILLE = ZdATown,
-#     X_L93 = ZdAXEpsg2154,     # Coordonnée X (Lambert 93)
-#     Y_L93 = ZdAYEpsg2154      # Coordonnée Y (Lambert 93)
-#   )
-
-# # Jointure finale
-# df_final <- df_agg %>% left_join(geo_clean, by = "ID_REFA_LDA")
-# View(head(df_final))
-
+library(sf)
 
 geo_shp <- st_read("data/geo/PL_ZDL_R_07-01-2026.shp")
 View(head(geo_shp))
@@ -306,18 +291,11 @@ df_final <- df_agg %>%
 
 
 View(head(df_final))
+class(df_final$JOUR)
 
 # Export du fichier apres nettoyage
 if (!dir.exists("data/final_data")) {
   dir.create("data/final_data")
 }
-write_csv(df, "data/final_data/validations_geo_2018_2024.csv")
+write_csv(df_final, "data/final_data/validations_geo_2018_2024.csv")
 saveRDS(df_final, "data/final_data/data_clean.rds", compress = "xz")
-
-
-df <- readRDS("data/final_data/data_clean.rds")
-View(head(df))
-
-df_random <- df %>% slice_sample(n = 100000)
-
-saveRDS(df_random, "data/final_data/validations_geo_2018_2024_sample100k.rds", compress = "xz")
