@@ -289,37 +289,47 @@ Subsequent years show a progressive rebound in 2021 and 2022, a level in 2023 sl
 
 
 
-## 3.3 Comparison with a reference week
+### 3.3 Comparison with a reference week
 
-### 3.3.1 Building daily profiles
+#### 3.3.1 Construction of daily and weekly profiles
 
-To compare “normal” and “holiday” periods, we first construct a daily ridership table `df_jour` by grouping `df` by `JOUR` and summing `NB_VALD` into `Total_Reseau`.  
-For each date, we derive additional variables: the calendar year `Annee`, the month `Mois`, and the day of week `Jour_Semaine`, computed with `wday(JOUR, label = TRUE, abbr = FALSE, week_start = 1)` so that weeks always start on Monday.
+To compare “normal” and holiday periods, the cleaned dataset `df` is first aggregated by date into a daily table `df_jour`, where each row contains the total network ridership `Total_Reseau = sum(NB_VALD)` for a given `JOUR`.  
+For every day, we derive three additional variables: the calendar year `Annee = year(JOUR)`, the month `Mois = month(JOUR)`, and the day of week `Jour_Semaine = wday(JOUR, label = TRUE, abbr = FALSE, week_start = 1)`, which ensures that all weekly profiles start on Monday. [web:56]
 
-Because 2020 is strongly affected by the COVID-19 crisis, it is excluded from the computation of historical averages, yielding a cleaned table `df_clean_stats` defined as `df_jour %>% filter(Annee != 2020)`.[1][2]
+Because 2020 is heavily affected by the COVID‑19 crisis, this year is excluded from the computation of historical averages, leading to a filtered table `df_clean_stats = df_jour %>% filter(Annee != 2020)`.  
+All weekly profiles used in the comparison are then derived from `df_jour` and `df_clean_stats` by averaging `Total_Reseau` by `Jour_Semaine` under different calendar conditions.
 
-### 3.3.2 Definition of benchmark and average weeks
+#### 3.3.2 Definition of benchmark and average weeks
 
-Four different weekly profiles are then constructed:
+Four distinct weekly profiles are constructed:
 
-- A benchmark week `profil_benchmark`, corresponding to the period from 4 to 10 March 2019 (`2019-03-04` to `2019-03-10`), which is chosen as a typical pre-COVID working week without holidays or major disruptions.  
-  This profile keeps the original `Total_Reseau` by `Jour_Semaine` and labels all rows with `Type = "1. Benchmark (Mars 2019)"`.
+- A benchmark week `profil_benchmark`, corresponding to the period from 4 to 10 March 2019 (`2019-03-04` to `2019-03-10`), chosen as a typical pre‑COVID working week without holidays or major disruptions.  
+  This profile keeps the original `Total_Reseau` values by `Jour_Semaine` and assigns `Type = "1. Benchmark (Mars 2019)"`.
 
-- A working-week profile `profil_travail`, defined by filtering `df_clean_stats` to “working” months (`Mois` in `c(1, 2, 3, 11)`), then averaging `Total_Reseau` by `Jour_Semaine` using `summarise(Valeur = mean(Total_Reseau))`.  
-  This profile is tagged as `Type = "2. Semaine Travail (Moyenne)"`.
+- A working-week profile `profil_travail`, obtained by restricting `df_clean_stats` to the “working” months January, February, March and November (`Mois %in% c(1, 2, 3, 11)`), then averaging `Total_Reseau` by `Jour_Semaine` via `summarise(Valeur = mean(Total_Reseau))`.  
+  The resulting rows are labelled `Type = "2. Semaine Travail (Moyenne)"`.
 
-- A holiday-week profile `profil_vacances`, built by restricting `df_clean_stats` to the summer months July and August (`Mois` in `c(7, 8)`), and again computing the mean `Total_Reseau` by `Jour_Semaine`.  
-  The result is labelled `Type = "3. Semaine Vacances (Moyenne)"`.
+- A holiday-week profile `profil_vacances`, built from the same `df_clean_stats` but keeping only July and August (`Mois %in% c(7, 8)`), and again computing the mean `Total_Reseau` by `Jour_Semaine`.  
+  This profile is tagged as `Type = "3. Semaine Vacances (Moyenne)"`.
 
-- A global average week `profil_global`, which aggregates `df_clean_stats` by `Jour_Semaine` over the whole 2018–2024 period (excluding 2020), yielding `Valeur = mean(Total_Reseau)` and the label `Type = "4. Semaine Globale (Moyenne)"`.
+- A global average week `profil_global`, obtained by averaging `Total_Reseau` by `Jour_Semaine` over all days in `df_clean_stats` without any seasonal filter, and labelled `Type = "4. Semaine Globale (Moyenne)"`.
 
-The four profiles are concatenated into a single table `donnees_comparatives` using `bind_rows()`, ready for visual comparison.
+The four profiles are concatenated with `bind_rows()` into a single table `donnees_comparatives`, which is then passed to `ggplot()` to produce the comparative chart shown in Figure \@ref(fig:fig-profils-hebdo).
 
-### 3.3.3 Visual comparison of weekly ridership
+```{r}
+#| label: fig-profils-hebdo
+#| echo: false
+#| fig-cap: "Benchmark and average weekly ridership profiles (excluding 2020)."
+#| fig-width: 10
+#| fig-height: 6
+knitr::include_graphics("../graphes/4.png")
+```
 
-The weekly profiles are plotted with `ggplot(donnees_comparatives, aes(x = Jour_Semaine, y = Valeur, color = Type, group = Type))`, using `geom_line()` and `geom_point()` to draw one coloured line per profile.  
-A customised colour palette (`scale_color_manual()`) assigns black to the benchmark week, red to the working-week average, green to the holiday-week average and blue to the global average, while `theme_minimal()` and a bottom legend (`theme(legend.position = "bottom")`) ensure readability.
+#### 3.3.3 Interpretation of the weekly comparison
 
-The resulting figure clearly shows the typical weekly structure of the network, with higher ridership from Monday to Friday, a drop on Saturday and an even lower level on Sunday.  
-It also highlights the impact of holidays: the “working-week” curve lies consistently above the global average, whereas the “holiday-week” curve is significantly lower on all days of the week, quantifying the reduction in demand during summer periods.
+The weekly profiles plotted in Figure \@ref(fig:fig-profils-hebdo) all share the same general shape: ridership increases from Monday to Thursday, reaches its highest level on Thursday and Friday, then drops sharply on Saturday and even more on Sunday.  
+This confirms that the rail network is primarily driven by commuting activity on weekdays, with weekends systematically showing much lower demand. [web:56]
 
+Comparing the four curves highlights the impact of holidays on travel behaviour.  
+The working-week average lies slightly above both the benchmark and the global average on most weekdays, reflecting that dense working periods generate the highest volumes.  
+In contrast, the holiday-week profile is clearly below the other curves for every day of the week, with gaps of several hundred thousand validations on Mondays to Fridays, which quantifies the reduction in regular trips during summer and school holidays.
