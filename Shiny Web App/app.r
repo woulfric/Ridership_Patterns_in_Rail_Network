@@ -4,7 +4,7 @@ library(leaflet)
 library(scales)
 
 # --- 1. CHARGEMENT ET PRÉPARATION ---
-df <- readRDS("data_clean.rds")
+df <- readRDS("validations_geo_2018_2024_sample100k.rds")
 
 # Préparation Données Carte
 df_map <- df %>%
