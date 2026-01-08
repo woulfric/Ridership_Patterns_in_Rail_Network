@@ -320,4 +320,4 @@ View(head(df))
 
 df_random <- df %>% slice_sample(n = 100000)
 
-write_csv(df_random, "data/final_data/validations_geo_2018_2024_sample100k.csv")
+saveRDS(df_random, "data/final_data/validations_geo_2018_2024_sample100k.rds", compress = "xz")
