@@ -244,29 +244,44 @@ This list structure allows us to apply exactly the same cleaning function to eve
 <h3 class="anchored" data-anchor-id="aggregation-to-stop-area-level-and-spatial-join">3.1.5 Aggregation to stop-area level and spatial join</h3>
 <p>After cleaning, the dataset still contains one row per original record, which can correspond to very fine ticket or device details. For network-level analysis and mapping, we aggregate these records to a more synthetic level by grouping on JOUR and ID_REFA_LDA only, and summing NB_VALD within each group.</p>
 <p>This aggregation produces a compact table df_agg where each row corresponds to the total daily ridership of a given stop-area, with variables JOUR, ID_REFA_LDA and the aggregated count NB_VALD. This step drastically reduces the number of rows while preserving all the information needed about when and where validations take place.</p>
-<p>To enable geographical visualisations, we then join df_agg with the spatial reference of stop areas, which is stored as a shapefile containing the polygons of “Zones d’arrêt”. The spatial file is read with the sf package and transformed to the standard WGS84 coordinate system.</p>
-<p>For each zone, we compute its centroid and extract its longitude and latitude, keeping only a few attributes: the stop-area identifier ID_REFA_LDA, the station name NOM_GARE, the municipality VILLE and the coordinates LON and LAT. A left join between df_agg and this cleaned spatial table geo_clean yields the final analytical dataset df_final, which combines daily ridership with station names and geographic coordinates and is saved as data_clean.rds for later use in the EDA and the Shiny dashboard.</p>
 <div class="cell">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb5"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Aggregation by day, stop-area and ticket family</span></span>
 <span id="cb5-2"><a href="#cb5-2" aria-hidden="true" tabindex="-1"></a>df_agg <span class="ot">&lt;-</span> df <span class="sc">%&gt;%</span></span>
-<span id="cb5-3"><a href="#cb5-3" aria-hidden="true" tabindex="-1"></a>  <span class="fu">group_by</span>(JOUR, ID_REFA_LDA, CATEGORIE_TITRE) <span class="sc">%&gt;%</span></span>
-<span id="cb5-4"><a href="#cb5-4" aria-hidden="true" tabindex="-1"></a>  <span class="fu">summarise</span>(<span class="at">NB_VALD =</span> <span class="fu">sum</span>(NB_VALD, <span class="at">na.rm =</span> <span class="cn">TRUE</span>), <span class="at">.groups =</span> <span class="st">"drop"</span>)</span>
-<span id="cb5-5"><a href="#cb5-5" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb5-6"><a href="#cb5-6" aria-hidden="true" tabindex="-1"></a><span class="co"># Spatial reference of stop areas (simplified workflow)</span></span>
-<span id="cb5-7"><a href="#cb5-7" aria-hidden="true" tabindex="-1"></a>geo_shp <span class="ot">&lt;-</span> <span class="fu">st_read</span>(<span class="st">"data/geo/PL_ZDL_R_07-01-2026.shp"</span>)</span>
-<span id="cb5-8"><a href="#cb5-8" aria-hidden="true" tabindex="-1"></a>geo_clean <span class="ot">&lt;-</span> geo_shp <span class="sc">%&gt;%</span></span>
-<span id="cb5-9"><a href="#cb5-9" aria-hidden="true" tabindex="-1"></a>  <span class="fu">st_transform</span>(<span class="dv">4326</span>) <span class="sc">%&gt;%</span></span>
-<span id="cb5-10"><a href="#cb5-10" aria-hidden="true" tabindex="-1"></a>  <span class="fu">st_centroid</span>() <span class="sc">%&gt;%</span></span>
-<span id="cb5-11"><a href="#cb5-11" aria-hidden="true" tabindex="-1"></a>  <span class="fu">mutate</span>(</span>
-<span id="cb5-12"><a href="#cb5-12" aria-hidden="true" tabindex="-1"></a>    <span class="at">LON         =</span> <span class="fu">st_coordinates</span>(.)[, <span class="dv">1</span>],</span>
-<span id="cb5-13"><a href="#cb5-13" aria-hidden="true" tabindex="-1"></a>    <span class="at">LAT         =</span> <span class="fu">st_coordinates</span>(.)[, <span class="dv">2</span>],</span>
-<span id="cb5-14"><a href="#cb5-14" aria-hidden="true" tabindex="-1"></a>    <span class="at">ID_REFA_LDA =</span> <span class="fu">as.numeric</span>(idrefa_lda)</span>
-<span id="cb5-15"><a href="#cb5-15" aria-hidden="true" tabindex="-1"></a>  ) <span class="sc">%&gt;%</span></span>
-<span id="cb5-16"><a href="#cb5-16" aria-hidden="true" tabindex="-1"></a>  <span class="fu">st_drop_geometry</span>() <span class="sc">%&gt;%</span></span>
-<span id="cb5-17"><a href="#cb5-17" aria-hidden="true" tabindex="-1"></a>  <span class="fu">select</span>(ID_REFA_LDA, <span class="at">NOM_GARE =</span> nom_lda, <span class="at">VILLE =</span> commune, LON, LAT)</span>
-<span id="cb5-18"><a href="#cb5-18" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb5-19"><a href="#cb5-19" aria-hidden="true" tabindex="-1"></a>df_final <span class="ot">&lt;-</span> df_agg <span class="sc">%&gt;%</span></span>
-<span id="cb5-20"><a href="#cb5-20" aria-hidden="true" tabindex="-1"></a>  <span class="fu">left_join</span>(geo_clean, <span class="at">by =</span> <span class="st">"ID_REFA_LDA"</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<span id="cb5-3"><a href="#cb5-3" aria-hidden="true" tabindex="-1"></a>  <span class="fu">group_by</span>(JOUR, ID_REFA_LDA) <span class="sc">%&gt;%</span></span>
+<span id="cb5-4"><a href="#cb5-4" aria-hidden="true" tabindex="-1"></a>  </span>
+<span id="cb5-5"><a href="#cb5-5" aria-hidden="true" tabindex="-1"></a>  <span class="co"># On somme les validations pour réduire le nombre de lignes</span></span>
+<span id="cb5-6"><a href="#cb5-6" aria-hidden="true" tabindex="-1"></a>  <span class="fu">summarise</span>(</span>
+<span id="cb5-7"><a href="#cb5-7" aria-hidden="true" tabindex="-1"></a>    <span class="at">NB_VALD =</span> <span class="fu">sum</span>(NB_VALD, <span class="at">na.rm =</span> <span class="cn">TRUE</span>),</span>
+<span id="cb5-8"><a href="#cb5-8" aria-hidden="true" tabindex="-1"></a>    <span class="at">.groups =</span> <span class="st">"drop"</span></span>
+<span id="cb5-9"><a href="#cb5-9" aria-hidden="true" tabindex="-1"></a>  )</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</div>
+<p>To enable geographical visualisations, we then join df_agg with the spatial reference of stop areas, which is stored as a shapefile containing the polygons of “Zones d’arrêt”. The spatial file is read with the sf package and transformed to the standard WGS84 coordinate system.</p>
+<p>For each zone, we compute its centroid and extract its longitude and latitude, keeping only a few attributes: the stop-area identifier ID_REFA_LDA, the station name NOM_GARE, the municipality VILLE and the coordinates LON and LAT. A left join between df_agg and this cleaned spatial table geo_clean yields the final analytical dataset df_final, which combines daily ridership with station names and geographic coordinates and is saved as data_clean.rds for later use in the EDA and the Shiny dashboard.</p>
+<div class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb6"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Aggregation by day, stop-area and ticket family</span></span>
+<span id="cb6-2"><a href="#cb6-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb6-3"><a href="#cb6-3" aria-hidden="true" tabindex="-1"></a>geo_clean <span class="ot">&lt;-</span> geo_shp <span class="sc">%&gt;%</span></span>
+<span id="cb6-4"><a href="#cb6-4" aria-hidden="true" tabindex="-1"></a>  <span class="fu">st_transform</span>(<span class="dv">4326</span>) <span class="sc">%&gt;%</span>      <span class="co"># Conversion en format GPS standard (WGS84)</span></span>
+<span id="cb6-5"><a href="#cb6-5" aria-hidden="true" tabindex="-1"></a>  <span class="fu">st_centroid</span>() <span class="sc">%&gt;%</span>           <span class="co"># On prend le point central de la zone</span></span>
+<span id="cb6-6"><a href="#cb6-6" aria-hidden="true" tabindex="-1"></a>  <span class="fu">mutate</span>(</span>
+<span id="cb6-7"><a href="#cb6-7" aria-hidden="true" tabindex="-1"></a>    <span class="co"># On récupère les coordonnées X et Y</span></span>
+<span id="cb6-8"><a href="#cb6-8" aria-hidden="true" tabindex="-1"></a>    <span class="at">LON =</span> <span class="fu">st_coordinates</span>(.)[,<span class="dv">1</span>],</span>
+<span id="cb6-9"><a href="#cb6-9" aria-hidden="true" tabindex="-1"></a>    <span class="at">LAT =</span> <span class="fu">st_coordinates</span>(.)[,<span class="dv">2</span>],</span>
+<span id="cb6-10"><a href="#cb6-10" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb6-11"><a href="#cb6-11" aria-hidden="true" tabindex="-1"></a>    <span class="co"># On s'assure que l'ID est numérique pour la jointure</span></span>
+<span id="cb6-12"><a href="#cb6-12" aria-hidden="true" tabindex="-1"></a>    <span class="at">ID_REFA_LDA =</span> <span class="fu">as.numeric</span>(idrefa_lda)</span>
+<span id="cb6-13"><a href="#cb6-13" aria-hidden="true" tabindex="-1"></a>  ) <span class="sc">%&gt;%</span></span>
+<span id="cb6-14"><a href="#cb6-14" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb6-15"><a href="#cb6-15" aria-hidden="true" tabindex="-1"></a>  <span class="co"># On garde uniquement les infos utiles</span></span>
+<span id="cb6-16"><a href="#cb6-16" aria-hidden="true" tabindex="-1"></a>  <span class="fu">st_drop_geometry</span>() <span class="sc">%&gt;%</span></span>
+<span id="cb6-17"><a href="#cb6-17" aria-hidden="true" tabindex="-1"></a>  <span class="fu">select</span>(ID_REFA_LDA, <span class="at">NOM_GARE =</span> nom_lda, <span class="at">VILLE =</span> commune, LON, LAT) <span class="sc">%&gt;%</span></span>
+<span id="cb6-18"><a href="#cb6-18" aria-hidden="true" tabindex="-1"></a>  <span class="fu">distinct</span>(ID_REFA_LDA, <span class="at">.keep_all =</span> <span class="cn">TRUE</span>)</span>
+<span id="cb6-19"><a href="#cb6-19" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb6-20"><a href="#cb6-20" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb6-21"><a href="#cb6-21" aria-hidden="true" tabindex="-1"></a><span class="co"># Jointure des données agrégées avec les données géographiques</span></span>
+<span id="cb6-22"><a href="#cb6-22" aria-hidden="true" tabindex="-1"></a>df_final <span class="ot">&lt;-</span> df_agg <span class="sc">%&gt;%</span></span>
+<span id="cb6-23"><a href="#cb6-23" aria-hidden="true" tabindex="-1"></a>  <span class="fu">ungroup</span>() <span class="sc">%&gt;%</span></span>
+<span id="cb6-24"><a href="#cb6-24" aria-hidden="true" tabindex="-1"></a>  <span class="fu">left_join</span>(geo_clean, <span class="at">by =</span> <span class="st">"ID_REFA_LDA"</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 </div>
 <p>This final table df_final is the main input for all subsequent exploratory analyses and for the Shiny dashboard, since it combines daily ridership by stop-area with station names and geographic coordinates.</p>
 </section>

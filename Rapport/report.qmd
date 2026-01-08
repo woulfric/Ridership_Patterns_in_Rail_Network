@@ -181,6 +181,20 @@ For network-level analysis and mapping, we aggregate these records to a more syn
 This aggregation produces a compact table df_agg where each row corresponds to the total daily ridership of a given stop-area, with variables JOUR, ID_REFA_LDA and the aggregated count NB_VALD.
 This step drastically reduces the number of rows while preserving all the information needed about when and where validations take place.
 
+```{r}
+#| label: agg-geo-illustration1
+#| eval: false
+# Aggregation by day, stop-area and ticket family
+df_agg <- df %>%
+  group_by(JOUR, ID_REFA_LDA) %>%
+  
+  # On somme les validations pour réduire le nombre de lignes
+  summarise(
+    NB_VALD = sum(NB_VALD, na.rm = TRUE),
+    .groups = "drop"
+  )
+```
+
 To enable geographical visualisations, we then join df_agg with the spatial reference of stop areas, which is stored as a shapefile containing the polygons of “Zones d’arrêt”.
 The spatial file is read with the sf package and transformed to the standard WGS84 coordinate system.
 
@@ -188,27 +202,31 @@ For each zone, we compute its centroid and extract its longitude and latitude, k
 A left join between df_agg and this cleaned spatial table geo_clean yields the final analytical dataset df_final, which combines daily ridership with station names and geographic coordinates and is saved as data_clean.rds for later use in the EDA and the Shiny dashboard.
 
 ```{r}
-#| label: agg-geo-illustration
+#| label: agg-geo-illustration2
 #| eval: false
 # Aggregation by day, stop-area and ticket family
-df_agg <- df %>%
-  group_by(JOUR, ID_REFA_LDA, CATEGORIE_TITRE) %>%
-  summarise(NB_VALD = sum(NB_VALD, na.rm = TRUE), .groups = "drop")
 
-# Spatial reference of stop areas (simplified workflow)
-geo_shp <- st_read("data/geo/PL_ZDL_R_07-01-2026.shp")
 geo_clean <- geo_shp %>%
-  st_transform(4326) %>%
-  st_centroid() %>%
+  st_transform(4326) %>%      # Conversion en format GPS standard (WGS84)
+  st_centroid() %>%           # On prend le point central de la zone
   mutate(
-    LON         = st_coordinates(.)[, 1],
-    LAT         = st_coordinates(.)[, 2],
+    # On récupère les coordonnées X et Y
+    LON = st_coordinates(.)[,1],
+    LAT = st_coordinates(.)[,2],
+
+    # On s'assure que l'ID est numérique pour la jointure
     ID_REFA_LDA = as.numeric(idrefa_lda)
   ) %>%
-  st_drop_geometry() %>%
-  select(ID_REFA_LDA, NOM_GARE = nom_lda, VILLE = commune, LON, LAT)
 
+  # On garde uniquement les infos utiles
+  st_drop_geometry() %>%
+  select(ID_REFA_LDA, NOM_GARE = nom_lda, VILLE = commune, LON, LAT) %>%
+  distinct(ID_REFA_LDA, .keep_all = TRUE)
+
+
+# Jointure des données agrégées avec les données géographiques
 df_final <- df_agg %>%
+  ungroup() %>%
   left_join(geo_clean, by = "ID_REFA_LDA")
 
 
@@ -220,11 +238,6 @@ This final table df_final is the main input for all subsequent exploratory analy
 
 
 
-
-
-## 3.2 Exploratory data analysis
-
-### 3.2.1 Daily network-wide ridership
 
 
 ### 3.2 Exploratory data analysis
