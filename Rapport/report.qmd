@@ -1,6 +1,6 @@
 ---
 title: "Analyzing and Visualizing Ridership Patterns in Île-de-France"
-author: "Group: Amira HAMDI, Melissa MEDJBER, Kamel YENNEK, Elias ACHOUR"
+author: "Group: Melissa MEDJBER, Kamel YENNEK, Elias ACHOUR, Amira HAMDI"
 date: "January 2026"
 format: html
 execute:
@@ -41,44 +41,158 @@ The analysis is based on open data provided by Île-de-France Mobilités, includ
 In this report, the study period is restricted to 1 January 2018 – 31 December 2024, and validations are aggregated at the stop-area level defined by the identifier ID_REFA_LDA.
 
 ## 2.2 Software and R packages
-All computations and figures are produced in R (version X.Y.Z) using the following packages:
+All computations and figures are produced in R (`version X.Y.Z`) using the following packages:
 
-tidyverse for data manipulation (dplyr, tidyr, readr) and plotting (ggplot2).
+- ``tidyverse`` for data manipulation (`dplyr, tidyr, readr`) and plotting (`ggplot2`).
 
-lubridate for date parsing and handling of temporal variables.
+- ``lubridate`` for date parsing and handling of temporal variables.
 
-sf for reading and transforming the spatial stop-area reference data.
+- ``sf`` for reading and transforming the spatial stop-area reference data.
 
 The full analysis is implemented in a reproducible way inside this Quarto document, which can be rendered to PDF or HTML.
 
 # 3. Response to the questions
 
-## Data preprocessing and cleaning
+## 3.1. Data preprocessing and cleaning
 
-### 1 Reading and concatenating raw yearly files
+### 3.1.1 Reading and concatenating raw yearly files
 
 
-The raw validation data are provided as semester-based text files for each year between 2018 and 2024. [web:20][web:24][web:47]  
-In our script, we first import the two semester files for every year using `read.delim()`, adapting the separator or encoding when necessary (for example a semicolon separator for the second semester of 2022 and UTF-16LE encoding for one 2023 file).
+The raw validation data are provided as semester-based text files for each year between 2018 and 2024.  
+For every year, the script imports the two semester files using the function `read.delim()`, but a few files require specific options.  
+In particular, the second semester of 2022 uses a semicolon as separator, so we explicitly set `sep = ";"` when reading `validation_2_trim_2022`.  
+In 2023, the second semester file is encoded in `UTF-16LE`, which is handled by passing `fileEncoding = "UTF-16LE"` to `read.delim()`.  
+Finally, in 2024 the second validation file is named `2024_T3_NB_FER.txt` instead of following the usual `S2` pattern, and is therefore read into the object `validation_2_trim_2024` using its actual file name.
 
-Concretely, this produces fourteen R objects in memory (`validation_1_trim_2018`, `validation_2_trim_2018`, …, `validation_2_trim_2024`), each corresponding to one semester of rail validations.  
-All these objects are then stored in a single list `liste_dfs`, which allows us to apply the same cleaning function to every file in a compact and reproducible way.
+Each semester file is stored in a separate object (e.g. `validation_1_trim_2018`, `validation_2_trim_2018`, …, `validation_2_trim_2024`), and all these objects are then combined into a single list called `liste_dfs`.  
+This list structure allows us to apply exactly the same cleaning function to every semester, instead of repeating the same code fourteen times, and ensures that the processing pipeline is compact and reproducible.
 
-### 2 Harmonising column names and types
+```{r}
+#| label: import-raw-illustration
+#| eval: false
+# Example: importing one semester and storing all tables in a list
+validation_1_trim_2018 <- read.delim("data/data-rf-2018/2018_S1_NB_FER.txt")
+validation_2_trim_2018 <- read.delim("data/data-rf-2018/2018_S2_NB_FER.txt")
+liste_dfs <- list(validation_1_trim_2018, validation_2_trim_2018, ...)
 
-Because the historical files do not all use the same schema, a dedicated function `clean_valid_type()` is applied to each element of `liste_dfs`. [web:56]  
-This function first standardises the stop-area identifier by renaming any column called `lda` or `ID_ZDC` into a common field `ID_REFA_LDA`, which will later be used to join ridership data with the spatial reference of stop areas.
+```
 
-In a second step, the function enforces consistent data types across all years: network and stop codes are converted to character (`CODE_STIF_RES`, `CODE_STIF_ARRET`), the validation count `NB_VALD` is cast to integer, and the date column `JOUR` is parsed as a proper `Date` object using flexible formats (`ymd` or `dmy` depending on the original encoding).  
-After applying `clean_valid_type()` to each element of the list, the cleaned tables are concatenated row-wise with `bind_rows()` to form a single historical dataset `df` covering all days, stops and ticket categories for the period 2018–2024.
+### 3.1.2 Harmonising column names and types
 
-### 3 Handling missing values and inconsistent records
+The historical files do not all share the same schema, so we define a dedicated function ``clean_valid_type()`` that is applied to each element of ``liste_dfs``.
+Inside this function, we first standardise the stop-area identifier by renaming any column called ``lda`` or ``ID_ZDC`` into a common field ``ID_REFA_LDA``, which will later be used as the key for spatial joins.
 
-The consolidated dataset `df` is then checked for data quality issues by counting missing values in each column and isolating problematic rows. [web:56]  
-In particular, we identify records with missing or empty stop codes (`CODE_STIF_ARRET`) or network codes (`CODE_STIF_RES`), as well as rows where the stop name corresponds to an unknown location.
+The function then enforces consistent data types across all years: network and stop codes are cast to character (``CODE_STIF_RES, CODE_STIF_ARRET``), the validation count NB_VALD is converted to integer, and the date JOUR is parsed as a Date using flexible formats (``ymd`` or ``dmy``).
+Once ``clean_valid_type()`` has been applied to all elements of liste_dfs via purrr::map(), the cleaned tables are concatenated row-wise with bind_rows() to form a single historical dataset ``df`` covering all days, stops and ticket categories between 2018 and 2024.
+```{r}
+#| label: clean-types-illustration
+#| eval: false
+# Schematic view of the cleaning function
+clean_valid_type <- function(df) {
+  df %>%
+    rename_with(~ ifelse(. %in% c("lda", "ID_ZDC"), "ID_REFA_LDA", .)) %>%
+    mutate(
+      CODE_STIF_RES   = as.character(CODE_STIF_RES),
+      CODE_STIF_ARRET = as.character(CODE_STIF_ARRET),
+      NB_VALD         = as.integer(NB_VALD),
+      JOUR            = as.Date(parse_date_time(JOUR, orders = c("ymd", "dmy")))
+    )
+}
+df <- liste_dfs |> purrr::map(clean_valid_type) |> dplyr::bind_rows()
 
-To avoid keeping observations that cannot be reliably mapped to a physical station, all lines where `LIBELLE_ARRET` is equal to “Inconnu” are removed from the dataset, and the difference in row count before and after this filter is reported.  
-In addition, we examine the distribution of the main ridership variable `NB_VALD`, confirm the absence of negative values, and drop all rows where `NB_VALD` is missing, which correspond to incomplete or non-numeric records in the raw files.
+```
 
-Finally, the temporal extent of the study is enforced by keeping only dates between 1 January 2018 and 31 December 2024.  
-This restriction ensures that all subsequent analyses are perfectly aligned with the project specification and that no earlier or later data points from the IdFM history files are inadvertently included. [web:47][web:50]
+### 3.1.3 Handling missing values and inconsistent records
+
+The consolidated dataset df is then examined for data quality issues by counting missing values per column and isolating problematic rows.
+We specifically identify records where the stop code ``CODE_STIF_ARRET ``or the network code ``CODE_STIF_RES`` is missing or empty, as well as rows where the stop label ``LIBELLE_ARRET`` is equal to “Inconnu”, which correspond to locations that cannot be reliably mapped to a real station.
+
+To avoid keeping such ambiguous observations, all rows with ``LIBELLE_ARRET == "Inconnu"`` are removed, and the number of deleted lines is reported to quantify the impact of this filter.
+We also investigate the distribution of the main ridership variable ``NB_VALD``, verify that there are no negative counts, and drop all rows where ``NB_VALD`` is missing, which correspond to incomplete or non-numeric records in the raw files.
+
+Finally, the time span of the study is enforced by keeping only dates between 1 January 2018 and 31 December 2024 through a simple filter on the JOUR column.
+At this stage, ``df`` contains only valid records with non-missing stop and network codes, a non-missing validation count, and dates lying strictly inside the project period.
+
+```{r}
+#| label: clean-missing-illustration
+#| eval: false
+# Schematic example of quality filters
+df <- df %>%
+  filter(LIBELLE_ARRET != "Inconnu") %>%
+  filter(!is.na(NB_VALD)) %>%
+  filter(JOUR >= as.Date("2018-01-01"),
+         JOUR <= as.Date("2024-12-31"))
+
+```
+
+### 3.1.4 Recoding ticket categories
+The original ticket category variable ``CATEGORIE_TITRE`` contains numerous labels with typographical variants and encoding issues (for example “IMAGINE R” vs “Imagine R”, or different spellings for solidarity contracts).
+To make the analysis more robust and readable, we recode these raw labels into a limited set of synthetic categories that group similar products together.
+
+In practice, the script uses a ``case_match()`` statement to map several original labels into a single target category.
+The main groups are: “Imagine R” (student passes), “Forfait Navigo” (standard season tickets), “Contrat Solidarité Transport” (solidarity fares), “Amethyste”, “Forfaits courts” (short-duration products), “Forfait Gratuité Transport” (FGT), “NON DEFINI”, and a residual group “Autres titres” that absorbs any remaining labels not explicitly listed.
+
+This transformation reduces noise in the typology of tickets and allows comparisons between a small number of meaningful product families instead of many rarely used labels.
+```{r}
+#| label: recode-tickets-illustration
+#| eval: false
+# Illustration of the recoding strategy for CATEGORIE_TITRE
+df <- df %>%
+  mutate(CATEGORIE_TITRE = case_match(
+    CATEGORIE_TITRE,
+    c("IMAGINE R", "Imagine R") ~ "Imagine R",
+    c("NAVIGO", "Forfait Navigo") ~ "Forfait Navigo",
+    c("TST", "Contrat Solidarité Transport", "Contrat Solidarit\xe9 Transport") ~
+      "Contrat Solidarité Transport",
+    c("AMETHYSTE", "Amethyste") ~ "Amethyste",
+    c("NAVIGO JOUR", "Forfaits courts") ~ "Forfaits courts",
+    "FGT" ~ "Forfait Gratuité Transport",
+    c("?", "NON DEFINI") ~ "NON DEFINI",
+    .default = "Autres titres"
+  ))
+
+
+```
+
+​
+
+### 3.1.5 Aggregation to stop-area level and spatial join
+After cleaning and recoding, the dataset still contains one row per original record, which can correspond to very fine ticket or device details.
+For network-level analysis and mapping, we aggregate these records to a more synthetic level: one row per day (``JOUR``), stop-area (``ID_REFA_LDA``) and ticket family (``CATEGORIE_TITRE``), with the total number of validations NB_VALD summed within each group.
+
+This aggregation produces a compact table ``df_agg`` where each row corresponds to the daily ridership of a given stop-area and ticket category.
+To enable geographical visualisations, we then join ``df_agg`` with the spatial reference of stop areas, which is stored as a shapefile containing the polygons of “Zones d’arrêt”.
+
+The spatial file is read with the ``sf`` package and transformed to the standard WGS84 coordinate system.
+
+For each zone, we compute its centroid and extract its longitude and latitude, keeping only a few attributes: the stop-area identifier (``ID_REFA_LDA``), the station name (``NOM_GARE``), the municipality (``VILLE``) and the coordinates (``LON, LAT``).
+A left join between ``df_agg`` and this cleaned spatial table (``geo_clean``) yields the final analytical dataset ``df_final``, which combines daily ridership with station names and geographic coordinates and is saved as ``data_clean.rds`` for later use in the EDA and the Shiny dashboard.
+
+```{r}
+#| label: agg-geo-illustration
+#| eval: false
+# Aggregation by day, stop-area and ticket family
+df_agg <- df %>%
+  group_by(JOUR, ID_REFA_LDA, CATEGORIE_TITRE) %>%
+  summarise(NB_VALD = sum(NB_VALD, na.rm = TRUE), .groups = "drop")
+
+# Spatial reference of stop areas (simplified workflow)
+geo_shp <- st_read("data/geo/PL_ZDL_R_07-01-2026.shp")
+geo_clean <- geo_shp %>%
+  st_transform(4326) %>%
+  st_centroid() %>%
+  mutate(
+    LON         = st_coordinates(.)[, 1],
+    LAT         = st_coordinates(.)[, 2],
+    ID_REFA_LDA = as.numeric(idrefa_lda)
+  ) %>%
+  st_drop_geometry() %>%
+  select(ID_REFA_LDA, NOM_GARE = nom_lda, VILLE = commune, LON, LAT)
+
+df_final <- df_agg %>%
+  left_join(geo_clean, by = "ID_REFA_LDA")
+
+
+```
+
+This final table df_final is the main input for all subsequent exploratory analyses and for the Shiny dashboard, since it combines daily ridership by stop-area with station names and geographic coordinates.

@@ -6,7 +6,7 @@
 
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
 
-<meta name="author" content="Group: Amira HAMDI, Melissa MEDJBER, Kamel YENNEK, Elias ACHOUR">
+<meta name="author" content="Group: Melissa MEDJBER, Kamel YENNEK, Elias ACHOUR, Amira HAMDI">
 <meta name="dcterms.date" content="2026-01-01">
 
 <title>Analyzing and Visualizing Ridership Patterns in Île-de-France</title>
@@ -21,6 +21,41 @@ ul.task-list li input[type="checkbox"] {
   width: 0.8em;
   margin: 0 0.8em 0.2em -1em; /* quarto-specific, see https://github.com/quarto-dev/quarto-cli/issues/4556 */ 
   vertical-align: middle;
+}
+/* CSS for syntax highlighting */
+html { -webkit-text-size-adjust: 100%; }
+pre > code.sourceCode { white-space: pre; position: relative; }
+pre > code.sourceCode > span { display: inline-block; line-height: 1.25; }
+pre > code.sourceCode > span:empty { height: 1.2em; }
+.sourceCode { overflow: visible; }
+code.sourceCode > span { color: inherit; text-decoration: inherit; }
+div.sourceCode { margin: 1em 0; }
+pre.sourceCode { margin: 0; }
+@media screen {
+div.sourceCode { overflow: auto; }
+}
+@media print {
+pre > code.sourceCode { white-space: pre-wrap; }
+pre > code.sourceCode > span { text-indent: -5em; padding-left: 5em; }
+}
+pre.numberSource code
+  { counter-reset: source-line 0; }
+pre.numberSource code > span
+  { position: relative; left: -4em; counter-increment: source-line; }
+pre.numberSource code > span > a:first-child::before
+  { content: counter(source-line);
+    position: relative; left: -1em; text-align: right; vertical-align: baseline;
+    border: none; display: inline-block;
+    -webkit-touch-callout: none; -webkit-user-select: none;
+    -khtml-user-select: none; -moz-user-select: none;
+    -ms-user-select: none; user-select: none;
+    padding: 0 4px; width: 4em;
+  }
+pre.numberSource { margin-left: 3em;  padding-left: 4px; }
+div.sourceCode
+  {   }
+@media screen {
+pre > code.sourceCode > span > a:first-child::before { text-decoration: underline; }
 }
 </style>
 
@@ -59,7 +94,7 @@ ul.task-list li input[type="checkbox"] {
     <div>
     <div class="quarto-title-meta-heading">Author</div>
     <div class="quarto-title-meta-contents">
-             <p>Group: Amira HAMDI, Melissa MEDJBER, Kamel YENNEK, Elias ACHOUR </p>
+             <p>Group: Melissa MEDJBER, Kamel YENNEK, Elias ACHOUR, Amira HAMDI </p>
           </div>
   </div>
     
@@ -101,39 +136,115 @@ ul.task-list li input[type="checkbox"] {
 </section>
 <section id="software-and-r-packages" class="level2">
 <h2 class="anchored" data-anchor-id="software-and-r-packages">2.2 Software and R packages</h2>
-<p>All computations and figures are produced in R (version X.Y.Z) using the following packages:</p>
-<p>tidyverse for data manipulation (dplyr, tidyr, readr) and plotting (ggplot2).</p>
-<p>lubridate for date parsing and handling of temporal variables.</p>
-<p>sf for reading and transforming the spatial stop-area reference data.</p>
+<p>All computations and figures are produced in R (<code>version X.Y.Z</code>) using the following packages:</p>
+<ul>
+<li><p><code>tidyverse</code> for data manipulation (<code>dplyr, tidyr, readr</code>) and plotting (<code>ggplot2</code>).</p></li>
+<li><p><code>lubridate</code> for date parsing and handling of temporal variables.</p></li>
+<li><p><code>sf</code> for reading and transforming the spatial stop-area reference data.</p></li>
+</ul>
 <p>The full analysis is implemented in a reproducible way inside this Quarto document, which can be rendered to PDF or HTML.</p>
 </section>
 </section>
 <section id="response-to-the-questions" class="level1">
 <h1>3. Response to the questions</h1>
 <section id="data-preprocessing-and-cleaning" class="level2">
-<h2 class="anchored" data-anchor-id="data-preprocessing-and-cleaning">Data preprocessing and cleaning</h2>
+<h2 class="anchored" data-anchor-id="data-preprocessing-and-cleaning">3.1. Data preprocessing and cleaning</h2>
 <section id="reading-and-concatenating-raw-yearly-files" class="level3">
-<h3 class="anchored" data-anchor-id="reading-and-concatenating-raw-yearly-files">1 Reading and concatenating raw yearly files</h3>
-<p>The raw validation data are provided as semester-based text files for each year between 2018 and 2024. [web:20][web:24][web:47]<br>
-In our script, we first import the two semester files for every year using <code>read.delim()</code>, adapting the separator or encoding when necessary (for example a semicolon separator for the second semester of 2022 and UTF-16LE encoding for one 2023 file).</p>
-<p>Concretely, this produces fourteen R objects in memory (<code>validation_1_trim_2018</code>, <code>validation_2_trim_2018</code>, …, <code>validation_2_trim_2024</code>), each corresponding to one semester of rail validations.<br>
-All these objects are then stored in a single list <code>liste_dfs</code>, which allows us to apply the same cleaning function to every file in a compact and reproducible way.</p>
+<h3 class="anchored" data-anchor-id="reading-and-concatenating-raw-yearly-files">3.1.1 Reading and concatenating raw yearly files</h3>
+<p>The raw validation data are provided as semester-based text files for each year between 2018 and 2024. For each year, the script imports the two semester files using <code>read.delim()</code>, adapting the separator or the encoding when necessary (for example a semicolon separator for the second semester of 2022 and UTF‑16LE encoding for one 2023 file).</p>
+<p>Each semester file is stored in a separate object (e.g.&nbsp;<code>validation_1_trim_2018, validation_2_trim_2018, …, validation_2_trim_2024</code>), and all these objects are then combined into a single list called <code>liste_dfs</code>. This list structure allows us to apply exactly the same cleaning function to every semester, instead of repeating the same code fourteen times, and ensures that the processing pipeline is compact and reproducible.</p>
+<div class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb1"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Example: importing one semester and storing all tables in a list</span></span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a>validation_1_trim_2018 <span class="ot">&lt;-</span> <span class="fu">read.delim</span>(<span class="st">"data/data-rf-2018/2018_S1_NB_FER.txt"</span>)</span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a>validation_2_trim_2018 <span class="ot">&lt;-</span> <span class="fu">read.delim</span>(<span class="st">"data/data-rf-2018/2018_S2_NB_FER.txt"</span>)</span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a>liste_dfs <span class="ot">&lt;-</span> <span class="fu">list</span>(validation_1_trim_2018, validation_2_trim_2018, ...)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</div>
 </section>
 <section id="harmonising-column-names-and-types" class="level3">
-<h3 class="anchored" data-anchor-id="harmonising-column-names-and-types">2 Harmonising column names and types</h3>
-<p>Because the historical files do not all use the same schema, a dedicated function <code>clean_valid_type()</code> is applied to each element of <code>liste_dfs</code>. [web:56]<br>
-This function first standardises the stop-area identifier by renaming any column called <code>lda</code> or <code>ID_ZDC</code> into a common field <code>ID_REFA_LDA</code>, which will later be used to join ridership data with the spatial reference of stop areas.</p>
-<p>In a second step, the function enforces consistent data types across all years: network and stop codes are converted to character (<code>CODE_STIF_RES</code>, <code>CODE_STIF_ARRET</code>), the validation count <code>NB_VALD</code> is cast to integer, and the date column <code>JOUR</code> is parsed as a proper <code>Date</code> object using flexible formats (<code>ymd</code> or <code>dmy</code> depending on the original encoding).<br>
-After applying <code>clean_valid_type()</code> to each element of the list, the cleaned tables are concatenated row-wise with <code>bind_rows()</code> to form a single historical dataset <code>df</code> covering all days, stops and ticket categories for the period 2018–2024.</p>
+<h3 class="anchored" data-anchor-id="harmonising-column-names-and-types">3.1.2 Harmonising column names and types</h3>
+<p>The historical files do not all share the same schema, so we define a dedicated function <code>clean_valid_type()</code> that is applied to each element of <code>liste_dfs</code>. Inside this function, we first standardise the stop-area identifier by renaming any column called <code>lda</code> or <code>ID_ZDC</code> into a common field <code>ID_REFA_LDA</code>, which will later be used as the key for spatial joins.</p>
+<p>The function then enforces consistent data types across all years: network and stop codes are cast to character (<code>CODE_STIF_RES, CODE_STIF_ARRET</code>), the validation count NB_VALD is converted to integer, and the date JOUR is parsed as a Date using flexible formats (<code>ymd</code> or <code>dmy</code>). Once <code>clean_valid_type()</code> has been applied to all elements of liste_dfs via purrr::map(), the cleaned tables are concatenated row-wise with bind_rows() to form a single historical dataset <code>df</code> covering all days, stops and ticket categories between 2018 and 2024.</p>
+<div class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb2"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Schematic view of the cleaning function</span></span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a>clean_valid_type <span class="ot">&lt;-</span> <span class="cf">function</span>(df) {</span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a>  df <span class="sc">%&gt;%</span></span>
+<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a>    <span class="fu">rename_with</span>(<span class="sc">~</span> <span class="fu">ifelse</span>(. <span class="sc">%in%</span> <span class="fu">c</span>(<span class="st">"lda"</span>, <span class="st">"ID_ZDC"</span>), <span class="st">"ID_REFA_LDA"</span>, .)) <span class="sc">%&gt;%</span></span>
+<span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a>    <span class="fu">mutate</span>(</span>
+<span id="cb2-6"><a href="#cb2-6" aria-hidden="true" tabindex="-1"></a>      <span class="at">CODE_STIF_RES   =</span> <span class="fu">as.character</span>(CODE_STIF_RES),</span>
+<span id="cb2-7"><a href="#cb2-7" aria-hidden="true" tabindex="-1"></a>      <span class="at">CODE_STIF_ARRET =</span> <span class="fu">as.character</span>(CODE_STIF_ARRET),</span>
+<span id="cb2-8"><a href="#cb2-8" aria-hidden="true" tabindex="-1"></a>      <span class="at">NB_VALD         =</span> <span class="fu">as.integer</span>(NB_VALD),</span>
+<span id="cb2-9"><a href="#cb2-9" aria-hidden="true" tabindex="-1"></a>      <span class="at">JOUR            =</span> <span class="fu">as.Date</span>(<span class="fu">parse_date_time</span>(JOUR, <span class="at">orders =</span> <span class="fu">c</span>(<span class="st">"ymd"</span>, <span class="st">"dmy"</span>)))</span>
+<span id="cb2-10"><a href="#cb2-10" aria-hidden="true" tabindex="-1"></a>    )</span>
+<span id="cb2-11"><a href="#cb2-11" aria-hidden="true" tabindex="-1"></a>}</span>
+<span id="cb2-12"><a href="#cb2-12" aria-hidden="true" tabindex="-1"></a>df <span class="ot">&lt;-</span> liste_dfs <span class="sc">|&gt;</span> purrr<span class="sc">::</span><span class="fu">map</span>(clean_valid_type) <span class="sc">|&gt;</span> dplyr<span class="sc">::</span><span class="fu">bind_rows</span>()</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</div>
 </section>
 <section id="handling-missing-values-and-inconsistent-records" class="level3">
-<h3 class="anchored" data-anchor-id="handling-missing-values-and-inconsistent-records">3 Handling missing values and inconsistent records</h3>
-<p>The consolidated dataset <code>df</code> is then checked for data quality issues by counting missing values in each column and isolating problematic rows. [web:56]<br>
-In particular, we identify records with missing or empty stop codes (<code>CODE_STIF_ARRET</code>) or network codes (<code>CODE_STIF_RES</code>), as well as rows where the stop name corresponds to an unknown location.</p>
-<p>To avoid keeping observations that cannot be reliably mapped to a physical station, all lines where <code>LIBELLE_ARRET</code> is equal to “Inconnu” are removed from the dataset, and the difference in row count before and after this filter is reported.<br>
-In addition, we examine the distribution of the main ridership variable <code>NB_VALD</code>, confirm the absence of negative values, and drop all rows where <code>NB_VALD</code> is missing, which correspond to incomplete or non-numeric records in the raw files.</p>
-<p>Finally, the temporal extent of the study is enforced by keeping only dates between 1 January 2018 and 31 December 2024.<br>
-This restriction ensures that all subsequent analyses are perfectly aligned with the project specification and that no earlier or later data points from the IdFM history files are inadvertently included. [web:47][web:50]</p>
+<h3 class="anchored" data-anchor-id="handling-missing-values-and-inconsistent-records">3.1.3 Handling missing values and inconsistent records</h3>
+<p>The consolidated dataset df is then examined for data quality issues by counting missing values per column and isolating problematic rows. We specifically identify records where the stop code <code>CODE_STIF_ARRET</code>or the network code <code>CODE_STIF_RES</code> is missing or empty, as well as rows where the stop label <code>LIBELLE_ARRET</code> is equal to “Inconnu”, which correspond to locations that cannot be reliably mapped to a real station.</p>
+<p>To avoid keeping such ambiguous observations, all rows with <code>LIBELLE_ARRET == "Inconnu"</code> are removed, and the number of deleted lines is reported to quantify the impact of this filter. We also investigate the distribution of the main ridership variable <code>NB_VALD</code>, verify that there are no negative counts, and drop all rows where <code>NB_VALD</code> is missing, which correspond to incomplete or non-numeric records in the raw files.</p>
+<p>Finally, the time span of the study is enforced by keeping only dates between 1 January 2018 and 31 December 2024 through a simple filter on the JOUR column. At this stage, <code>df</code> contains only valid records with non-missing stop and network codes, a non-missing validation count, and dates lying strictly inside the project period.</p>
+<div class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb3"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Schematic example of quality filters</span></span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a>df <span class="ot">&lt;-</span> df <span class="sc">%&gt;%</span></span>
+<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a>  <span class="fu">filter</span>(LIBELLE_ARRET <span class="sc">!=</span> <span class="st">"Inconnu"</span>) <span class="sc">%&gt;%</span></span>
+<span id="cb3-4"><a href="#cb3-4" aria-hidden="true" tabindex="-1"></a>  <span class="fu">filter</span>(<span class="sc">!</span><span class="fu">is.na</span>(NB_VALD)) <span class="sc">%&gt;%</span></span>
+<span id="cb3-5"><a href="#cb3-5" aria-hidden="true" tabindex="-1"></a>  <span class="fu">filter</span>(JOUR <span class="sc">&gt;=</span> <span class="fu">as.Date</span>(<span class="st">"2018-01-01"</span>),</span>
+<span id="cb3-6"><a href="#cb3-6" aria-hidden="true" tabindex="-1"></a>         JOUR <span class="sc">&lt;=</span> <span class="fu">as.Date</span>(<span class="st">"2024-12-31"</span>))</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</div>
+</section>
+<section id="recoding-ticket-categories" class="level3">
+<h3 class="anchored" data-anchor-id="recoding-ticket-categories">3.1.4 Recoding ticket categories</h3>
+<p>The original ticket category variable <code>CATEGORIE_TITRE</code> contains numerous labels with typographical variants and encoding issues (for example “IMAGINE R” vs “Imagine R”, or different spellings for solidarity contracts). To make the analysis more robust and readable, we recode these raw labels into a limited set of synthetic categories that group similar products together.</p>
+<p>In practice, the script uses a <code>case_match()</code> statement to map several original labels into a single target category. The main groups are: “Imagine R” (student passes), “Forfait Navigo” (standard season tickets), “Contrat Solidarité Transport” (solidarity fares), “Amethyste”, “Forfaits courts” (short-duration products), “Forfait Gratuité Transport” (FGT), “NON DEFINI”, and a residual group “Autres titres” that absorbs any remaining labels not explicitly listed.</p>
+<p>This transformation reduces noise in the typology of tickets and allows comparisons between a small number of meaningful product families instead of many rarely used labels.</p>
+<div class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb4"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Illustration of the recoding strategy for CATEGORIE_TITRE</span></span>
+<span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a>df <span class="ot">&lt;-</span> df <span class="sc">%&gt;%</span></span>
+<span id="cb4-3"><a href="#cb4-3" aria-hidden="true" tabindex="-1"></a>  <span class="fu">mutate</span>(<span class="at">CATEGORIE_TITRE =</span> <span class="fu">case_match</span>(</span>
+<span id="cb4-4"><a href="#cb4-4" aria-hidden="true" tabindex="-1"></a>    CATEGORIE_TITRE,</span>
+<span id="cb4-5"><a href="#cb4-5" aria-hidden="true" tabindex="-1"></a>    <span class="fu">c</span>(<span class="st">"IMAGINE R"</span>, <span class="st">"Imagine R"</span>) <span class="sc">~</span> <span class="st">"Imagine R"</span>,</span>
+<span id="cb4-6"><a href="#cb4-6" aria-hidden="true" tabindex="-1"></a>    <span class="fu">c</span>(<span class="st">"NAVIGO"</span>, <span class="st">"Forfait Navigo"</span>) <span class="sc">~</span> <span class="st">"Forfait Navigo"</span>,</span>
+<span id="cb4-7"><a href="#cb4-7" aria-hidden="true" tabindex="-1"></a>    <span class="fu">c</span>(<span class="st">"TST"</span>, <span class="st">"Contrat Solidarité Transport"</span>, <span class="st">"Contrat Solidarit</span><span class="sc">\xe9</span><span class="st"> Transport"</span>) <span class="sc">~</span></span>
+<span id="cb4-8"><a href="#cb4-8" aria-hidden="true" tabindex="-1"></a>      <span class="st">"Contrat Solidarité Transport"</span>,</span>
+<span id="cb4-9"><a href="#cb4-9" aria-hidden="true" tabindex="-1"></a>    <span class="fu">c</span>(<span class="st">"AMETHYSTE"</span>, <span class="st">"Amethyste"</span>) <span class="sc">~</span> <span class="st">"Amethyste"</span>,</span>
+<span id="cb4-10"><a href="#cb4-10" aria-hidden="true" tabindex="-1"></a>    <span class="fu">c</span>(<span class="st">"NAVIGO JOUR"</span>, <span class="st">"Forfaits courts"</span>) <span class="sc">~</span> <span class="st">"Forfaits courts"</span>,</span>
+<span id="cb4-11"><a href="#cb4-11" aria-hidden="true" tabindex="-1"></a>    <span class="st">"FGT"</span> <span class="sc">~</span> <span class="st">"Forfait Gratuité Transport"</span>,</span>
+<span id="cb4-12"><a href="#cb4-12" aria-hidden="true" tabindex="-1"></a>    <span class="fu">c</span>(<span class="st">"?"</span>, <span class="st">"NON DEFINI"</span>) <span class="sc">~</span> <span class="st">"NON DEFINI"</span>,</span>
+<span id="cb4-13"><a href="#cb4-13" aria-hidden="true" tabindex="-1"></a>    <span class="at">.default =</span> <span class="st">"Autres titres"</span></span>
+<span id="cb4-14"><a href="#cb4-14" aria-hidden="true" tabindex="-1"></a>  ))</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</div>
+<p>​</p>
+</section>
+<section id="aggregation-to-stop-area-level-and-spatial-join" class="level3">
+<h3 class="anchored" data-anchor-id="aggregation-to-stop-area-level-and-spatial-join">3.1.5 Aggregation to stop-area level and spatial join</h3>
+<p>After cleaning and recoding, the dataset still contains one row per original record, which can correspond to very fine ticket or device details. For network-level analysis and mapping, we aggregate these records to a more synthetic level: one row per day (<code>JOUR</code>), stop-area (<code>ID_REFA_LDA</code>) and ticket family (<code>CATEGORIE_TITRE</code>), with the total number of validations NB_VALD summed within each group.</p>
+<p>This aggregation produces a compact table <code>df_agg</code> where each row corresponds to the daily ridership of a given stop-area and ticket category. To enable geographical visualisations, we then join <code>df_agg</code> with the spatial reference of stop areas, which is stored as a shapefile containing the polygons of “Zones d’arrêt”.</p>
+<p>The spatial file is read with the <code>sf</code> package and transformed to the standard WGS84 coordinate system.</p>
+<p>For each zone, we compute its centroid and extract its longitude and latitude, keeping only a few attributes: the stop-area identifier (<code>ID_REFA_LDA</code>), the station name (<code>NOM_GARE</code>), the municipality (<code>VILLE</code>) and the coordinates (<code>LON, LAT</code>). A left join between <code>df_agg</code> and this cleaned spatial table (<code>geo_clean</code>) yields the final analytical dataset <code>df_final</code>, which combines daily ridership with station names and geographic coordinates and is saved as <code>data_clean.rds</code> for later use in the EDA and the Shiny dashboard.</p>
+<div class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb5"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Aggregation by day, stop-area and ticket family</span></span>
+<span id="cb5-2"><a href="#cb5-2" aria-hidden="true" tabindex="-1"></a>df_agg <span class="ot">&lt;-</span> df <span class="sc">%&gt;%</span></span>
+<span id="cb5-3"><a href="#cb5-3" aria-hidden="true" tabindex="-1"></a>  <span class="fu">group_by</span>(JOUR, ID_REFA_LDA, CATEGORIE_TITRE) <span class="sc">%&gt;%</span></span>
+<span id="cb5-4"><a href="#cb5-4" aria-hidden="true" tabindex="-1"></a>  <span class="fu">summarise</span>(<span class="at">NB_VALD =</span> <span class="fu">sum</span>(NB_VALD, <span class="at">na.rm =</span> <span class="cn">TRUE</span>), <span class="at">.groups =</span> <span class="st">"drop"</span>)</span>
+<span id="cb5-5"><a href="#cb5-5" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-6"><a href="#cb5-6" aria-hidden="true" tabindex="-1"></a><span class="co"># Spatial reference of stop areas (simplified workflow)</span></span>
+<span id="cb5-7"><a href="#cb5-7" aria-hidden="true" tabindex="-1"></a>geo_shp <span class="ot">&lt;-</span> <span class="fu">st_read</span>(<span class="st">"data/geo/PL_ZDL_R_07-01-2026.shp"</span>)</span>
+<span id="cb5-8"><a href="#cb5-8" aria-hidden="true" tabindex="-1"></a>geo_clean <span class="ot">&lt;-</span> geo_shp <span class="sc">%&gt;%</span></span>
+<span id="cb5-9"><a href="#cb5-9" aria-hidden="true" tabindex="-1"></a>  <span class="fu">st_transform</span>(<span class="dv">4326</span>) <span class="sc">%&gt;%</span></span>
+<span id="cb5-10"><a href="#cb5-10" aria-hidden="true" tabindex="-1"></a>  <span class="fu">st_centroid</span>() <span class="sc">%&gt;%</span></span>
+<span id="cb5-11"><a href="#cb5-11" aria-hidden="true" tabindex="-1"></a>  <span class="fu">mutate</span>(</span>
+<span id="cb5-12"><a href="#cb5-12" aria-hidden="true" tabindex="-1"></a>    <span class="at">LON         =</span> <span class="fu">st_coordinates</span>(.)[, <span class="dv">1</span>],</span>
+<span id="cb5-13"><a href="#cb5-13" aria-hidden="true" tabindex="-1"></a>    <span class="at">LAT         =</span> <span class="fu">st_coordinates</span>(.)[, <span class="dv">2</span>],</span>
+<span id="cb5-14"><a href="#cb5-14" aria-hidden="true" tabindex="-1"></a>    <span class="at">ID_REFA_LDA =</span> <span class="fu">as.numeric</span>(idrefa_lda)</span>
+<span id="cb5-15"><a href="#cb5-15" aria-hidden="true" tabindex="-1"></a>  ) <span class="sc">%&gt;%</span></span>
+<span id="cb5-16"><a href="#cb5-16" aria-hidden="true" tabindex="-1"></a>  <span class="fu">st_drop_geometry</span>() <span class="sc">%&gt;%</span></span>
+<span id="cb5-17"><a href="#cb5-17" aria-hidden="true" tabindex="-1"></a>  <span class="fu">select</span>(ID_REFA_LDA, <span class="at">NOM_GARE =</span> nom_lda, <span class="at">VILLE =</span> commune, LON, LAT)</span>
+<span id="cb5-18"><a href="#cb5-18" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-19"><a href="#cb5-19" aria-hidden="true" tabindex="-1"></a>df_final <span class="ot">&lt;-</span> df_agg <span class="sc">%&gt;%</span></span>
+<span id="cb5-20"><a href="#cb5-20" aria-hidden="true" tabindex="-1"></a>  <span class="fu">left_join</span>(geo_clean, <span class="at">by =</span> <span class="st">"ID_REFA_LDA"</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</div>
+<p>This final table df_final is the main input for all subsequent exploratory analyses and for the Shiny dashboard, since it combines daily ridership by stop-area with station names and geographic coordinates.</p>
 </section>
 </section>
 </section>

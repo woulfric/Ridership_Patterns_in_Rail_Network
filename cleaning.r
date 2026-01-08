@@ -41,7 +41,7 @@ validation_2_trim_2024 = read.delim("data/data-rf-2024/2024_T3_NB_FER.txt")
 
 
 
-# 1. On met tes variables dans une liste
+# 1. On met les variables dans une liste
 liste_dfs <- list(
   validation_1_trim_2018, validation_2_trim_2018,
   validation_1_trim_2019, validation_2_trim_2019,
